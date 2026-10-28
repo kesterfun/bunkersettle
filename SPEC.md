@@ -97,8 +97,12 @@ fuelGrade (string, e.g. "VLSFO"), qtyKg, pricePerTonne,
 toleranceBps (e.g. 50 = 0.5%), retentionBps (default 1000 = 10%),
 deliveryDeadline, retentionWindow (seconds; demo 120, realistic 14 days),
 fundedAmount, deliveredKg, payableAmount, releasedAmount,
-approvedAt, status, disputeId
+approvedAt, status, disputeId,
+dscHash, refundedAmount, anchorage (Anchorage enum, nominated place of delivery)
 ```
+
+**Anchorage** (`enum Anchorage`): `WESTERN_PETROLEUM_A, WESTERN_PETROLEUM_B, EASTERN_PETROLEUM_A, EASTERN_PETROLEUM_B`.
+The zone nominated for the delivery, not a live ship position.
 
 **Status (state machine)**
 ```
@@ -131,7 +135,7 @@ OZ `AccessControl`. Deployer gets `DEFAULT_ADMIN_ROLE` + `ADMIN`.
 
 ### 5.2 BunkerOrder  (owns the state machine)
 `Pausable` (ADMIN pauses). Holds orders; is the **only** contract allowed to call PaymentEscrow.
-- `createOrder(supplier, bank, fuelGrade, qtyKg, pricePerTonne, toleranceBps, retentionBps, deliveryDeadline, retentionWindow) returns (id)` – BUYER. Validates: supplier has SUPPLIER, bank has BANK, qty > 0, price > 0, toleranceBps ≤ 500, retentionBps ≤ 5000, deadline in future. → `Created`.
+- `createOrder(OrderParams p) returns (id)` – BUYER. `OrderParams = { supplier, bank, fuelGrade, qtyKg, pricePerTonne, toleranceBps, retentionBps, deliveryDeadline, retentionWindow, dscHash, uint8 anchorage }`. Validates: supplier has SUPPLIER, bank has BANK, fuelGrade not empty, qty > 0, price > 0, toleranceBps ≤ 500, retentionBps ≤ 5000, deadline in future, anchorage within the `Anchorage` enum. Emits `OrderCreated` (incl. `dscHash` and `anchorage`). → `Created`.
 - `acceptOrder(id)` – that order's supplier. `Created` → `Accepted`.
 - `fundOrder(id)` – that order's bank. Pulls `qtyKg * price / 1000 * (10_000 + toleranceBps) / 10_000` MockSGD (covers max allowed over-delivery) into PaymentEscrow. `Accepted` → `Funded`.
 - `cancelOrder(id)` – buyer, while `Created`/`Accepted`. → `Cancelled`.
@@ -235,7 +239,9 @@ AlreadyWired()
 Single-page Vite app. Reads `ui/src/deployments.json` written by `deploy.ts`.
 
 - **Header**: connected account, its registry name and role(s), network check (31337), "Connect MetaMask".
-- **Buyer view**: create order form (prefilled demo values), list of own orders with a status timeline.
+- **Home – harbour chart**: every order pinned at its anchorage, coloured by state, with an order list beside it (filterable by anchorage). More than ~6 orders at one anchorage collapse into a cluster marker with a count and state ring. Selecting an order opens its order screen.
+- **Order screen**: status pipeline, status stamp, escrow tank (held / retention), activity for that order, and the actions the connected account may take.
+- **Buyer view**: create order form (prefilled demo values, anchorage dropdown), list of own orders with a status timeline.
 - **Supplier view**: accept orders, see released / pending amounts.
 - **Bank view**: approve + fund orders, total exposure (sum of held amounts).
 - **Oracle console** (labelled *demo only*): submit meter reading, eBDN, lab result for an order; hashes generated from a text input with `keccak256`.
@@ -245,7 +251,7 @@ Single-page Vite app. Reads `ui/src/deployments.json` written by `deploy.ts`.
 - **Errors**: never pre-validate in a way that hides contract reverts. Send the tx and show the decoded custom error (name + args) in a toast. A "UI checks" toggle may add client-side checks, default **off**.
 - **Dev helper** (only on chainId 31337): "Fast-forward time" button calling `evm_increaseTime` + `evm_mine`.
 
-Keep styling plain and readable on a projector (large type, high contrast).
+Keep styling plain and readable on a projector (large type, high contrast). Visual direction: "signal board" (white, thick black rules, signal-flag colours) with a chart-style home view; a projector-mode toggle enlarges type. A demo scenario stepper lists the §9 steps and which account acts next.
 
 ---
 
@@ -313,7 +319,7 @@ named DBD, stored off-chain.
 
 | SS 709 document | Abbrev. | Where it goes in our contracts |
 |---|---|---|
-| Sales confirmation – Delivered | DSC | `BunkerOrder.createOrder` / `acceptOrder` (order terms; store `dscHash`) |
+| Sales confirmation – Delivered | DSC | `BunkerOrder.createOrder` / `acceptOrder` (order terms incl. delivery anchorage; store `dscHash`) |
 | Bunker requisition form | BRF | optional: `createOrder` (`brfHash`) |
 | Bunker metering ticket | BMT | `DeliveryRecord.submitMeterReading` (`ticketHash` = BMT hash) |
 | Bunker delivery note | BDN | `DeliveryRecord.submitEBDN` (`ebdnHash` = BDN hash) |
