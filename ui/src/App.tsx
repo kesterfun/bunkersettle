@@ -1,6 +1,7 @@
 import { useChain } from "./chain/ChainContext";
 import { Header } from "./components/Header";
 import { Toasts } from "./components/Toasts";
+import { ActivityTicker } from "./components/ActivityTicker";
 import { ActivityLog } from "./components/ActivityLog";
 import { HarbourView } from "./components/HarbourView";
 import { OrderScreen } from "./components/OrderScreen";
@@ -32,6 +33,7 @@ export function App() {
         {view === "market" && <MarketPanel />}
       </main>
       <Toasts />
+      <ActivityTicker />
     </>
   );
 }

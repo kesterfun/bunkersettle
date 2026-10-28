@@ -1,0 +1,75 @@
+.tk {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  min-height: 2.4rem;
+  padding: 0.4rem max(1rem, env(safe-area-inset-right, 0px)) max(0.4rem, env(safe-area-inset-bottom, 0px))
+    max(1rem, env(safe-area-inset-left, 0px));
+  background: var(--bg);
+  color: var(--ink);
+  border: none;
+  border-top: var(--rule);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+.tk:hover .tk-open {
+  text-decoration: underline;
+}
+.tk-dot {
+  flex: none;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--green);
+}
+.tk-block {
+  flex: none;
+  color: var(--grey);
+}
+.tk-text {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tk-count {
+  flex: none;
+  color: var(--grey);
+}
+.tk-open {
+  flex: none;
+  font-weight: 700;
+}
+.tk-flash {
+  animation: tk-flash 1.6s ease-out;
+}
+@keyframes tk-flash {
+  from {
+    background: var(--yellow);
+  }
+  to {
+    background: var(--bg);
+  }
+}
+@media (max-width: 40rem) {
+  .tk-count,
+  .tk-block {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tk-flash {
+    animation: none;
+    background: var(--yellow);
+  }
+}

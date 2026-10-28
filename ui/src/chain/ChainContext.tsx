@@ -14,6 +14,7 @@ import {
   type OrderView,
   type Participant,
   type RoleName,
+  type TxInfo,
 } from "../domain";
 import { decodeError, type DecodedError } from "./errors";
 
@@ -76,6 +77,8 @@ export interface ChainState {
   disputes: DisputeView[];
   /** Every decoded contract event, newest first. */
   events: ActivityEvent[];
+  /** Sender and decoded function call for every transaction that emitted an event, by tx hash. */
+  txs: Record<string, TxInfo>;
   participants: Participant[];
   /** mSGD balance by lower-cased address (participants + escrow). */
   balances: Record<string, bigint>;
@@ -258,6 +261,8 @@ export function ChainProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<OrderView[]>([]);
   const [disputes, setDisputes] = useState<DisputeView[]>([]);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
+  const [txs, setTxs] = useState<Record<string, TxInfo>>({});
+  const txsRef = useRef<Record<string, TxInfo>>({});
   const [balances, setBalances] = useState<Record<string, bigint>>({});
   const [me, setMe] = useState<Me | null>(null);
   const [allowance, setAllowance] = useState(0n);
@@ -308,6 +313,7 @@ export function ChainProvider({ children }: { children: ReactNode }) {
       // A restarted node starts over at a lower block: drop everything cached.
       if (latest.number < lastLogBlock.current) {
         eventsRef.current = [];
+        txsRef.current = {};
         lastLogBlock.current = -1;
         blockTimes.current.clear();
         setTimeOffset(null);
@@ -356,6 +362,32 @@ export function ChainProvider({ children }: { children: ReactNode }) {
             timestamp: ts,
             orderId: rawId !== undefined ? Number(rawId) : undefined,
           });
+        }
+        // Sender + decoded call for each new transaction, so the feed can say who did what.
+        const newHashes = [...new Set(fresh.map((e) => e.txHash))].filter((h) => !txsRef.current[h]);
+        if (newHashes.length) {
+          const infos = await Promise.all(
+            newHashes.map(async (hash): Promise<TxInfo> => {
+              const tx = await provider.getTransaction(hash);
+              const target = tx?.to ? byAddress.get(tx.to.toLowerCase()) : undefined;
+              let fn: string | null = null;
+              const args: Record<string, unknown> = {};
+              if (tx && target) {
+                try {
+                  const parsed = target.iface.parseTransaction({ data: tx.data, value: tx.value });
+                  if (parsed) {
+                    fn = parsed.name;
+                    parsed.fragment.inputs.forEach((input, i) => (args[input.name || String(i)] = parsed.args[i]));
+                  }
+                } catch {
+                  fn = null;
+                }
+              }
+              return { hash, from: tx?.from ?? "", contract: target?.name ?? null, fn, args };
+            }),
+          );
+          txsRef.current = { ...txsRef.current, ...Object.fromEntries(infos.map((t) => [t.hash, t])) };
+          setTxs(txsRef.current);
         }
         lastLogBlock.current = latest.number;
         if (fresh.length) {
@@ -545,6 +577,7 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     orders,
     disputes,
     events,
+    txs,
     participants,
     balances,
     allowance,

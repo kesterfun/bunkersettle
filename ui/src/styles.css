@@ -83,7 +83,7 @@ code,
 .app-main {
   max-width: 1320px;
   margin: 0 auto;
-  padding: 1.5rem var(--gutter) 4rem;
+  padding: 1.5rem var(--gutter) calc(4rem + 3rem + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 1.5rem;

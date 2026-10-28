@@ -4,8 +4,22 @@
   gap: 0.8rem;
   min-width: 0;
 }
-.al-filter {
-  max-width: 22rem;
+.al-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.8rem 1.2rem;
+}
+.al-sel {
+  min-width: 11rem;
+}
+.al-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+  cursor: pointer;
 }
 .al-name {
   font-weight: 700;
@@ -13,6 +27,7 @@
 }
 .al-sw {
   display: inline-block;
+  flex: none;
   width: 0.7rem;
   height: 0.7rem;
   margin-right: 0.45rem;
@@ -26,4 +41,82 @@
 }
 .al-k {
   color: var(--grey);
+}
+
+.al-groups {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+.al-card {
+  border: var(--rule);
+  background: var(--bg);
+  padding: 0.7rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.al-head {
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+.al-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.8rem;
+  color: var(--grey);
+  font-size: 0.85rem;
+}
+.al-copy {
+  padding: 0.1rem 0.5rem;
+}
+.al-count {
+  color: var(--ink);
+  font-weight: 600;
+}
+.al-chain {
+  background: var(--pale);
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  font-weight: 700;
+  padding: 0 0.45rem;
+}
+.al-chainlist {
+  list-style: none;
+  margin: 0 0 0 0.6rem;
+  padding: 0 0 0 0.8rem;
+  border-left: 2px solid var(--soft);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.al-chainlist li {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.al-chainlist .al-sw {
+  align-self: center;
+}
+.al-arrow {
+  color: var(--grey);
+  margin-right: 0.4rem;
+}
+.al-raw {
+  font-size: 0.85rem;
+}
+.al-raw summary {
+  cursor: pointer;
+  color: var(--grey);
+  font-weight: 600;
+}
+.al-rawev {
+  margin-top: 0.4rem;
+  overflow-wrap: anywhere;
 }

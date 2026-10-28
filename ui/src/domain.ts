@@ -168,6 +168,18 @@ export interface Participant {
   roles: RoleName[];
 }
 
+/** The transaction behind a group of events: who sent it and which function it called. */
+export interface TxInfo {
+  hash: string;
+  from: string;
+  /** Contract name the tx was sent to, or null for a deployment / unknown target. */
+  contract: string | null;
+  /** Decoded function name, e.g. "submitEBDN", or null when it could not be decoded. */
+  fn: string | null;
+  /** Decoded function arguments by parameter name. */
+  args: Record<string, unknown>;
+}
+
 /** One decoded contract event for the activity log. */
 export interface ActivityEvent {
   /** `${txHash}:${logIndex}`, unique. */
