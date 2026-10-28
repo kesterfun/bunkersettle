@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Hardhat build output
+artifacts/
+cache/
+typechain-types/
+
+# Coverage
+coverage/
+coverage.json
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Frontend build output
+dist/
+build/
+
+# Logs & OS cruft
+*.log
+.DS_Store
+Thumbs.db
