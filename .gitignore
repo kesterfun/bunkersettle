@@ -27,3 +27,6 @@ Thumbs.db
 # Submission bundle / UI build
 submission/
 ui/dist/
+
+# Generated deployment manifest (npm run deploy)
+ui/src/deployments.json
