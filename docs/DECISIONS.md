@@ -28,3 +28,11 @@ Choices made during the build that SPEC.md does not cover.
 - **MockSGD** takes the registry in its constructor; `mint` is ADMIN-only via `RoleGuard`.
 - **Wiring order**: `setModules` rejects zero addresses (`InvalidParameter("module")`). Roles are exposed as registry constants (`registry.BUYER()` etc.).
 - **No viaIR** needed; all contracts well under 24 KB (BunkerOrder about 9.8 KB).
+
+## Milestone 3 – Tests
+
+- **Out-of-tolerance test data.** `DeliveryRecord` compares meter vs eBDN before BunkerOrder compares meter vs ordered qty. So the OUT_OF_TOLERANCE scenario (§7, §9 #2) uses meter = eBDN = 480 t; meter 480 t vs eBDN 500 t would raise QUANTITY_MISMATCH instead.
+- **`InvalidState` "expected" for multi-state guards.** Where a function accepts more than one state (e.g. `cancelOrder` accepts Created or Accepted), the error reports the first allowed state (`Created`) as `expected`. Tests assert this as written.
+- **Delivery submission after approval.** Submitting meter/eBDN on a `QuantityApproved` order reverts `AlreadySubmitted` (both items already exist and that check runs first), not `InvalidState`.
+- **Non-party callers in disputes.** Accounts that hold neither BUYER nor SUPPLIER (or BANK, for evidence) get `NotAuthorized`; a registered buyer/supplier who is not on the order gets `NotOrderParty`.
+- **Coverage.** 194 tests, 99.33% lines / 83.64% branches (`npm run coverage`). Branch gaps are mostly defensive checks (zero-address and rounding guards).
