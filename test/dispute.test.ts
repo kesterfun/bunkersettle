@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { deployFixture, sgd, tonnes, DAY } from "./helpers/fixtures";
+import { deployFixture, sgd, tonnes, DAY, ANCHORAGE } from "./helpers/fixtures";
 import type { Fixture } from "./helpers/fixtures";
 
 // Enum values from contracts/interfaces/BunkerTypes.sol
@@ -26,7 +26,19 @@ async function createOrderOnly(f: Fixture): Promise<number> {
   const deadline = (await time.latest()) + 7 * DAY;
   await f.order
     .connect(f.buyer)
-    .createOrder(f.supplier.address, f.bank.address, "VLSFO", QTY, PRICE, TOL, RET, deadline, WINDOW, h("DSC-1"));
+    .createOrder({
+      supplier: f.supplier.address,
+      bank: f.bank.address,
+      fuelGrade: "VLSFO",
+      qtyKg: QTY,
+      pricePerTonne: PRICE,
+      toleranceBps: TOL,
+      retentionBps: RET,
+      deliveryDeadline: deadline,
+      retentionWindow: WINDOW,
+      dscHash: h("DSC-1"),
+      anchorage: ANCHORAGE.EASTERN_PETROLEUM_B,
+    });
   return deadline;
 }
 

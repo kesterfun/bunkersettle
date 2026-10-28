@@ -59,3 +59,12 @@ Choices made during the build that SPEC.md does not cover.
 - **Scenario 4 order stays `Funded`.** The outsider's meter reading reverts, so that order is left funded on purpose; it shows the failed call did not consume the meter slot. Each `npm run scenarios` run therefore locks ~492k mSGD of the bank's float.
 - **Bank top-up in scenarios.** Each run uses ~1.8M mSGD, so `scenarios.ts` mints the bank back up to 5,000,000 mSGD (admin mint) when its balance falls below 2,000,000. Repeat runs on the same chain keep working. Script-only; contracts unchanged.
 - **Error decoding.** Reverts are decoded with the contract interface's `parseError`; the Hardhat provider nests revert data at `err.data.data`, so the script checks both locations.
+
+## Pre-milestone 5 – Delivery anchorage
+
+- **Why.** The UI home view is a harbour chart with one pin per order, so each order needs a place of delivery. Bunker delivery notes record where the delivery took place, so the anchorage is stored on-chain with the order terms, not in the UI.
+- **Anchorage enum.** `Anchorage { WESTERN_PETROLEUM_A, WESTERN_PETROLEUM_B, EASTERN_PETROLEUM_A, EASTERN_PETROLEUM_B }` in `BunkerTypes.sol`, stored as `Order.anchorage` and emitted as the last field of `OrderCreated`. It is the nominated delivery zone, not a live ship position. Live AIS positions would need another oracle role and stay out of scope (SPEC 1).
+- **`createOrder(OrderParams)`.** `createOrder` now takes one `OrderParams` struct instead of 10 positional arguments, leaving room for the new field without stack-too-deep risk. Field names and validation are unchanged from SPEC 5.2.
+- **Anchorage validation.** `OrderParams.anchorage` is a raw `uint8`, checked against `type(Anchorage).max`, so a bad value reverts `InvalidParameter("anchorage")` instead of a bare ABI decode revert.
+- **Scenario anchorages.** `scripts/scenarios.ts` places S1 at Eastern Petroleum B, S2 at Western Petroleum A, S3 at Eastern Petroleum A and S4 at Western Petroleum B, so the chart shows the demo orders spread out.
+- **Tests.** 196 tests (2 new: anchorage stored and emitted; out-of-range anchorage reverts), 99.33% lines.

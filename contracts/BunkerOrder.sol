@@ -32,7 +32,8 @@ contract BunkerOrder is IBunkerOrder, RoleGuard, Pausable, ReentrancyGuard {
         uint256 qtyKg,
         uint256 pricePerTonne,
         bytes32 dscHash,
-        DocType docType
+        DocType docType,
+        Anchorage anchorage
     );
     event OrderAccepted(uint256 indexed id, address indexed supplier);
     event OrderFunded(uint256 indexed id, address indexed bank, uint256 amount);
@@ -102,53 +103,41 @@ contract BunkerOrder is IBunkerOrder, RoleGuard, Pausable, ReentrancyGuard {
     // ------------------------------------------------------------ order flow
 
     /// @notice Create a new bunker order. BUYER only.
-    /// @param supplier Designated supplier (must hold SUPPLIER).
-    /// @param bank Designated financing bank (must hold BANK).
-    /// @param fuelGrade Fuel grade, e.g. "VLSFO".
-    /// @param qtyKg Ordered quantity in kilograms.
-    /// @param pricePerTonne Price in MockSGD (18 decimals) per tonne.
-    /// @param toleranceBps Quantity tolerance in basis points (max 500).
-    /// @param retentionBps Retention in basis points (max 5000).
-    /// @param deliveryDeadline Unix time by which delivery must happen; must be in the future.
-    /// @param retentionWindow Seconds after quantity approval before retention may be released without a lab result.
-    /// @param dscHash Hash of the SS 709 Sales confirmation - Delivered (DSC) holding the order terms.
+    /// @param p Order terms:
+    ///        supplier (must hold SUPPLIER), bank (must hold BANK), fuelGrade (e.g. "VLSFO"),
+    ///        qtyKg (kilograms), pricePerTonne (MockSGD, 18 decimals), toleranceBps (max 500),
+    ///        retentionBps (max 5000), deliveryDeadline (unix time, in the future),
+    ///        retentionWindow (seconds after quantity approval before retention may be released without a lab result),
+    ///        dscHash (hash of the SS 709 Sales confirmation - Delivered holding the order terms),
+    ///        anchorage (`Anchorage` value nominated as the place of delivery).
     /// @return id New order id.
-    function createOrder(
-        address supplier,
-        address bank,
-        string calldata fuelGrade,
-        uint256 qtyKg,
-        uint256 pricePerTonne,
-        uint16 toleranceBps,
-        uint16 retentionBps,
-        uint256 deliveryDeadline,
-        uint256 retentionWindow,
-        bytes32 dscHash
-    ) external whenNotPaused returns (uint256 id) {
+    function createOrder(OrderParams calldata p) external whenNotPaused returns (uint256 id) {
         _requireRole(ROLE_BUYER, msg.sender);
-        if (!registry.hasActiveRole(ROLE_SUPPLIER, supplier)) revert InvalidParameter("supplier");
-        if (!registry.hasActiveRole(ROLE_BANK, bank)) revert InvalidParameter("bank");
-        if (bytes(fuelGrade).length == 0) revert InvalidParameter("fuelGrade");
-        if (qtyKg == 0) revert InvalidParameter("qtyKg");
-        if (pricePerTonne == 0) revert InvalidParameter("pricePerTonne");
-        if (toleranceBps > 500) revert InvalidParameter("toleranceBps");
-        if (retentionBps > 5000) revert InvalidParameter("retentionBps");
-        if (deliveryDeadline <= block.timestamp) revert InvalidParameter("deliveryDeadline");
+        if (!registry.hasActiveRole(ROLE_SUPPLIER, p.supplier)) revert InvalidParameter("supplier");
+        if (!registry.hasActiveRole(ROLE_BANK, p.bank)) revert InvalidParameter("bank");
+        if (bytes(p.fuelGrade).length == 0) revert InvalidParameter("fuelGrade");
+        if (p.qtyKg == 0) revert InvalidParameter("qtyKg");
+        if (p.pricePerTonne == 0) revert InvalidParameter("pricePerTonne");
+        if (p.toleranceBps > 500) revert InvalidParameter("toleranceBps");
+        if (p.retentionBps > 5000) revert InvalidParameter("retentionBps");
+        if (p.deliveryDeadline <= block.timestamp) revert InvalidParameter("deliveryDeadline");
+        if (p.anchorage > uint8(type(Anchorage).max)) revert InvalidParameter("anchorage");
 
         id = ++_count;
         Order storage o = _orders[id];
         o.id = id;
         o.buyer = msg.sender;
-        o.supplier = supplier;
-        o.bank = bank;
-        o.fuelGrade = fuelGrade;
-        o.qtyKg = qtyKg;
-        o.pricePerTonne = pricePerTonne;
-        o.toleranceBps = toleranceBps;
-        o.retentionBps = retentionBps;
-        o.deliveryDeadline = deliveryDeadline;
-        o.retentionWindow = retentionWindow;
-        o.dscHash = dscHash;
+        o.supplier = p.supplier;
+        o.bank = p.bank;
+        o.fuelGrade = p.fuelGrade;
+        o.qtyKg = p.qtyKg;
+        o.pricePerTonne = p.pricePerTonne;
+        o.toleranceBps = p.toleranceBps;
+        o.retentionBps = p.retentionBps;
+        o.deliveryDeadline = p.deliveryDeadline;
+        o.retentionWindow = p.retentionWindow;
+        o.dscHash = p.dscHash;
+        o.anchorage = Anchorage(p.anchorage);
         o.status = Status.Created;
         _emitCreated(o);
     }
@@ -349,6 +338,6 @@ contract BunkerOrder is IBunkerOrder, RoleGuard, Pausable, ReentrancyGuard {
     }
 
     function _emitCreated(Order storage o) private {
-        emit OrderCreated(o.id, o.buyer, o.supplier, o.bank, o.qtyKg, o.pricePerTonne, o.dscHash, DocType.DSC);
+        emit OrderCreated(o.id, o.buyer, o.supplier, o.bank, o.qtyKg, o.pricePerTonne, o.dscHash, DocType.DSC, o.anchorage);
     }
 }

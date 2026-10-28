@@ -36,6 +36,8 @@ const WINDOW = 120;
 const DAY = 24 * 60 * 60;
 const SHARE_SUPPLIER_BPS = 7000;
 const PRICE = 980; // mSGD per tonne, SPEC 9 scenario 1
+/** `Anchorage` enum values in BunkerTypes.sol. */
+const ANCHORAGE = { WESTERN_PETROLEUM_A: 0, WESTERN_PETROLEUM_B: 1, EASTERN_PETROLEUM_A: 2, EASTERN_PETROLEUM_B: 3 };
 
 /** Bank float restored by the admin when the bank drops below MIN_BANK_BALANCE. */
 const BANK_FLOAT = 5_000_000;
@@ -154,24 +156,25 @@ async function main() {
     }
   }
 
-  /** Creates a SPEC 9 order (500 t VLSFO @ 980 mSGD/t) with a deadline 7 days from chain time. */
-  async function createOrder(label: string): Promise<bigint> {
+  /** Creates a SPEC 9 order (500 t VLSFO @ 980 mSGD/t) at `anchorage`, with a deadline 7 days from chain time. */
+  async function createOrder(label: string, anchorage: number): Promise<bigint> {
     const deadline = (await now()) + 7 * DAY;
     await (
       await order
         .connect(buyer)
-        .createOrder(
-          supplier.address,
-          bank.address,
-          "VLSFO",
-          tonnes(500),
-          sgd(PRICE),
-          TOL,
-          RET,
-          deadline,
-          WINDOW,
-          h("DSC-DEMO"),
-        )
+        .createOrder({
+          supplier: supplier.address,
+          bank: bank.address,
+          fuelGrade: "VLSFO",
+          qtyKg: tonnes(500),
+          pricePerTonne: sgd(PRICE),
+          toleranceBps: TOL,
+          retentionBps: RET,
+          deliveryDeadline: deadline,
+          retentionWindow: WINDOW,
+          dscHash: h("DSC-DEMO"),
+          anchorage,
+        })
     ).wait();
     const id: bigint = await order.orderCount();
     await snapshot(`${label}: create`, id, "Created");
@@ -202,7 +205,7 @@ async function main() {
   let contaminatedOrder = 0n;
 
   await runScenario("Scenario 1: normal delivery", async () => {
-    const id = await createOrder("S1");
+    const id = await createOrder("S1", ANCHORAGE.EASTERN_PETROLEUM_B);
     summary.push({ scenario: "1 Normal", orderId: id });
     await acceptAndFund("S1", id);
     await (await delivery.connect(meterOracle).submitMeterReading(id, tonnes(500.2), h("BMT-001"))).wait();
@@ -214,7 +217,7 @@ async function main() {
   });
 
   await runScenario("Scenario 2: short delivery", async () => {
-    shortOrder = await createOrder("S2");
+    shortOrder = await createOrder("S2", ANCHORAGE.WESTERN_PETROLEUM_A);
     summary.push({ scenario: "2 Short delivery", orderId: shortOrder });
     await acceptAndFund("S2", shortOrder);
     await (await delivery.connect(meterOracle).submitMeterReading(shortOrder, tonnes(480), h("BMT-002"))).wait();
@@ -224,7 +227,7 @@ async function main() {
   });
 
   await runScenario("Scenario 3: contaminated fuel", async () => {
-    contaminatedOrder = await createOrder("S3");
+    contaminatedOrder = await createOrder("S3", ANCHORAGE.EASTERN_PETROLEUM_A);
     summary.push({ scenario: "3 Contaminated fuel", orderId: contaminatedOrder });
     await acceptAndFund("S3", contaminatedOrder);
     await (await delivery.connect(meterOracle).submitMeterReading(contaminatedOrder, tonnes(500.2), h("BMT-003"))).wait();
@@ -236,7 +239,7 @@ async function main() {
   });
 
   await runScenario("Scenario 4: outsider", async () => {
-    const id = await createOrder("S4");
+    const id = await createOrder("S4", ANCHORAGE.WESTERN_PETROLEUM_B);
     summary.push({ scenario: "4 Outsider attempt", orderId: id });
     await acceptAndFund("S4", id);
     try {

@@ -2,7 +2,7 @@ import { expect } from "chai";
 import type { ContractTransactionResponse } from "ethers";
 import { ethers } from "hardhat";
 import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { deployFixture, sgd, tonnes, DAY } from "./helpers/fixtures";
+import { deployFixture, sgd, tonnes, DAY, ANCHORAGE } from "./helpers/fixtures";
 
 // Status (BunkerTypes.sol)
 const STATUS = {
@@ -34,18 +34,19 @@ async function createdOrderFixture() {
   const deadline = (await time.latest()) + 7 * DAY;
   await f.order
     .connect(f.buyer)
-    .createOrder(
-      f.supplier.address,
-      f.bank.address,
-      "VLSFO",
-      tonnes(500),
-      sgd(980),
-      50,
-      1000,
-      deadline,
-      120,
-      DSC_HASH,
-    );
+    .createOrder({
+      supplier: f.supplier.address,
+      bank: f.bank.address,
+      fuelGrade: "VLSFO",
+      qtyKg: tonnes(500),
+      pricePerTonne: sgd(980),
+      toleranceBps: 50,
+      retentionBps: 1000,
+      deliveryDeadline: deadline,
+      retentionWindow: 120,
+      dscHash: DSC_HASH,
+      anchorage: ANCHORAGE.EASTERN_PETROLEUM_B,
+    });
   return { ...f, deadline };
 }
 

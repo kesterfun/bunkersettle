@@ -17,6 +17,14 @@ export const tonnes = (t: number) => BigInt(Math.round(t * 1000));
 
 export const DAY = 24 * 60 * 60;
 
+/** `Anchorage` enum values in BunkerTypes.sol. */
+export const ANCHORAGE = {
+  WESTERN_PETROLEUM_A: 0,
+  WESTERN_PETROLEUM_B: 1,
+  EASTERN_PETROLEUM_A: 2,
+  EASTERN_PETROLEUM_B: 3,
+} as const;
+
 /** Deploys all contracts in SPEC 5.8 order, wires them, and seeds the SPEC 9 demo participants. */
 export async function deployFixture() {
   const [admin, bank, buyer, supplier, meterOracle, ebdnOracle, lab, arbiter, outsider] =

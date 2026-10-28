@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { deployFixture, sgd, tonnes, DAY, type Fixture } from "./helpers/fixtures";
+import { deployFixture, sgd, tonnes, DAY, ANCHORAGE, type Fixture } from "./helpers/fixtures";
 
 /** Order status values (BunkerTypes.Status). */
 const S = {
@@ -68,18 +68,19 @@ async function createOrderFor(
   const dl = deadline ?? (await time.latest()) + 7 * DAY;
   await f.order
     .connect(f.buyer)
-    .createOrder(
-      f.supplier.address,
-      f.bank.address,
-      "VLSFO",
-      qtyKg,
-      price,
-      TOL,
-      RET,
-      dl,
-      WINDOW,
-      DSC,
-    );
+    .createOrder({
+      supplier: f.supplier.address,
+      bank: f.bank.address,
+      fuelGrade: "VLSFO",
+      qtyKg: qtyKg,
+      pricePerTonne: price,
+      toleranceBps: TOL,
+      retentionBps: RET,
+      deliveryDeadline: dl,
+      retentionWindow: WINDOW,
+      dscHash: DSC,
+      anchorage: ANCHORAGE.EASTERN_PETROLEUM_B,
+    });
   return await f.order.orderCount();
 }
 
@@ -105,7 +106,19 @@ describe("e2e flows (milestone 3)", () => {
     const deadline = (await time.latest()) + 7 * DAY;
     await f.order
       .connect(f.buyer)
-      .createOrder(f.supplier.address, f.bank.address, "VLSFO", qty, price, TOL, RET, deadline, WINDOW, DSC);
+      .createOrder({
+        supplier: f.supplier.address,
+        bank: f.bank.address,
+        fuelGrade: "VLSFO",
+        qtyKg: qty,
+        pricePerTonne: price,
+        toleranceBps: TOL,
+        retentionBps: RET,
+        deliveryDeadline: deadline,
+        retentionWindow: WINDOW,
+        dscHash: DSC,
+        anchorage: ANCHORAGE.EASTERN_PETROLEUM_B,
+      });
     const id = 1n;
     await expectBalances(f, id, {
       bank: TOTAL,

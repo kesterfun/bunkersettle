@@ -6,7 +6,7 @@ import {
   setBalance,
   impersonateAccount,
 } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { deployFixture, sgd, tonnes, DAY } from "./helpers/fixtures";
+import { deployFixture, sgd, tonnes, DAY, ANCHORAGE } from "./helpers/fixtures";
 import type { Fixture } from "./helpers/fixtures";
 
 const S = {
@@ -39,6 +39,7 @@ type Overrides = Partial<{
   toleranceBps: number;
   retentionBps: number;
   deadline: number;
+  anchorage: number;
 }>;
 
 /** Calls createOrder with the SPEC 9 defaults, overridden per field. Returns the tx promise. */
@@ -46,18 +47,19 @@ async function tryCreate(f: Fixture, o: Overrides = {}, caller = f.buyer) {
   const deadline = o.deadline ?? (await time.latest()) + 7 * DAY;
   return f.order
     .connect(caller)
-    .createOrder(
-      o.supplier ?? f.supplier.address,
-      o.bank ?? f.bank.address,
-      o.fuelGrade ?? "VLSFO",
-      o.qtyKg ?? QTY,
-      o.pricePerTonne ?? PRICE,
-      o.toleranceBps ?? TOL,
-      o.retentionBps ?? RET,
-      deadline,
-      WINDOW,
-      DSC_HASH,
-    );
+    .createOrder({
+      supplier: o.supplier ?? f.supplier.address,
+      bank: o.bank ?? f.bank.address,
+      fuelGrade: o.fuelGrade ?? "VLSFO",
+      qtyKg: o.qtyKg ?? QTY,
+      pricePerTonne: o.pricePerTonne ?? PRICE,
+      toleranceBps: o.toleranceBps ?? TOL,
+      retentionBps: o.retentionBps ?? RET,
+      deliveryDeadline: deadline,
+      retentionWindow: WINDOW,
+      dscHash: DSC_HASH,
+      anchorage: o.anchorage ?? ANCHORAGE.EASTERN_PETROLEUM_B,
+    });
 }
 
 /** Creates a default order as the buyer and returns its id. */
@@ -101,21 +103,22 @@ describe("BunkerOrder lifecycle before delivery", () => {
       await expect(
         f.order
           .connect(f.buyer)
-          .createOrder(
-            f.supplier.address,
-            f.bank.address,
-            "VLSFO",
-            QTY,
-            PRICE,
-            TOL,
-            RET,
-            deadline,
-            WINDOW,
-            DSC_HASH,
-          ),
+          .createOrder({
+            supplier: f.supplier.address,
+            bank: f.bank.address,
+            fuelGrade: "VLSFO",
+            qtyKg: QTY,
+            pricePerTonne: PRICE,
+            toleranceBps: TOL,
+            retentionBps: RET,
+            deliveryDeadline: deadline,
+            retentionWindow: WINDOW,
+            dscHash: DSC_HASH,
+            anchorage: ANCHORAGE.EASTERN_PETROLEUM_B,
+          }),
       )
         .to.emit(f.order, "OrderCreated")
-        .withArgs(1n, f.buyer.address, f.supplier.address, f.bank.address, QTY, PRICE, DSC_HASH, DOC_DSC);
+        .withArgs(1n, f.buyer.address, f.supplier.address, f.bank.address, QTY, PRICE, DSC_HASH, DOC_DSC, ANCHORAGE.EASTERN_PETROLEUM_B);
 
       const o = await f.order.getOrder(1);
       expect(o.id).to.equal(1n);
@@ -138,6 +141,7 @@ describe("BunkerOrder lifecycle before delivery", () => {
       expect(o.disputeId).to.equal(0n);
       expect(o.dscHash).to.equal(DSC_HASH);
       expect(o.refundedAmount).to.equal(0n);
+      expect(o.anchorage).to.equal(BigInt(ANCHORAGE.EASTERN_PETROLEUM_B));
       expect(await f.order.orderCount()).to.equal(1n);
     });
 
@@ -146,7 +150,7 @@ describe("BunkerOrder lifecycle before delivery", () => {
       await tryCreate(f);
       await expect(tryCreate(f))
         .to.emit(f.order, "OrderCreated")
-        .withArgs(2n, f.buyer.address, f.supplier.address, f.bank.address, QTY, PRICE, DSC_HASH, DOC_DSC);
+        .withArgs(2n, f.buyer.address, f.supplier.address, f.bank.address, QTY, PRICE, DSC_HASH, DOC_DSC, ANCHORAGE.EASTERN_PETROLEUM_B);
       expect(await f.order.orderCount()).to.equal(2n);
     });
 
@@ -156,6 +160,26 @@ describe("BunkerOrder lifecycle before delivery", () => {
       const o = await f.order.getOrder(1);
       expect(o.toleranceBps).to.equal(500n);
       expect(o.retentionBps).to.equal(5000n);
+    });
+
+    it("stores and emits each anchorage, including the last enum value", async () => {
+      const f = await loadFixture(deployFixture);
+      await expect(tryCreate(f, { anchorage: ANCHORAGE.WESTERN_PETROLEUM_A }))
+        .to.emit(f.order, "OrderCreated")
+        .withArgs(
+          1n, f.buyer.address, f.supplier.address, f.bank.address, QTY, PRICE, DSC_HASH, DOC_DSC,
+          ANCHORAGE.WESTERN_PETROLEUM_A,
+        );
+      await tryCreate(f, { anchorage: ANCHORAGE.EASTERN_PETROLEUM_B });
+      expect((await f.order.getOrder(1)).anchorage).to.equal(BigInt(ANCHORAGE.WESTERN_PETROLEUM_A));
+      expect((await f.order.getOrder(2)).anchorage).to.equal(BigInt(ANCHORAGE.EASTERN_PETROLEUM_B));
+    });
+
+    it("reverts InvalidParameter(anchorage) for a value outside the Anchorage enum", async () => {
+      const f = await loadFixture(deployFixture);
+      await expect(tryCreate(f, { anchorage: ANCHORAGE.EASTERN_PETROLEUM_B + 1 }))
+        .to.be.revertedWithCustomError(f.order, "InvalidParameter")
+        .withArgs("anchorage");
     });
 
     it("reverts InvalidParameter(qtyKg) when quantity is zero", async () => {

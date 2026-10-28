@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import { deployFixture, sgd, tonnes, DAY } from "./helpers/fixtures";
+import { deployFixture, sgd, tonnes, DAY, ANCHORAGE } from "./helpers/fixtures";
 
 describe("wiring (milestone 2 smoke)", () => {
   it("wires the modules to the expected addresses", async () => {
@@ -52,18 +52,19 @@ describe("wiring (milestone 2 smoke)", () => {
     await expect(
       f.order
         .connect(f.buyer)
-        .createOrder(
-          f.supplier.address,
-          f.bank.address,
-          "VLSFO",
-          tonnes(500),
-          sgd(980),
-          50,
-          1000,
-          deadline,
-          120,
-          ethers.keccak256(ethers.toUtf8Bytes("DSC")),
-        ),
+        .createOrder({
+          supplier: f.supplier.address,
+          bank: f.bank.address,
+          fuelGrade: "VLSFO",
+          qtyKg: tonnes(500),
+          pricePerTonne: sgd(980),
+          toleranceBps: 50,
+          retentionBps: 1000,
+          deliveryDeadline: deadline,
+          retentionWindow: 120,
+          dscHash: ethers.keccak256(ethers.toUtf8Bytes("DSC")),
+          anchorage: ANCHORAGE.EASTERN_PETROLEUM_B,
+        }),
     ).to.emit(f.order, "OrderCreated");
     expect(await f.order.orderCount()).to.equal(1n);
     const o = await f.order.getOrder(1);

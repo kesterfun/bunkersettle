@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture, time } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import type { PaymentEscrow } from "../typechain-types";
-import { deployFixture, sgd, tonnes, DAY, type Fixture } from "./helpers/fixtures";
+import { deployFixture, sgd, tonnes, DAY, ANCHORAGE, type Fixture } from "./helpers/fixtures";
 
 const DSC_HASH = ethers.keccak256(ethers.toUtf8Bytes("DSC"));
 const METER_HASH = ethers.keccak256(ethers.toUtf8Bytes("BMT"));
@@ -15,18 +15,19 @@ async function createOrder(f: Fixture) {
   const deadline = (await time.latest()) + 7 * DAY;
   return f.order
     .connect(f.buyer)
-    .createOrder(
-      f.supplier.address,
-      f.bank.address,
-      "VLSFO",
-      tonnes(500),
-      sgd(980),
-      50,
-      1000,
-      deadline,
-      120,
-      DSC_HASH,
-    );
+    .createOrder({
+      supplier: f.supplier.address,
+      bank: f.bank.address,
+      fuelGrade: "VLSFO",
+      qtyKg: tonnes(500),
+      pricePerTonne: sgd(980),
+      toleranceBps: 50,
+      retentionBps: 1000,
+      deliveryDeadline: deadline,
+      retentionWindow: 120,
+      dscHash: DSC_HASH,
+      anchorage: ANCHORAGE.EASTERN_PETROLEUM_B,
+    });
 }
 
 /** Order 1 in `Funded` state. */
@@ -166,18 +167,19 @@ describe("ParticipantRegistry", () => {
       await expect(
         f.order
           .connect(f.buyer)
-          .createOrder(
-            f.supplier.address,
-            f.bank.address,
-            "VLSFO",
-            tonnes(500),
-            sgd(980),
-            50,
-            1000,
-            deadline,
-            120,
-            DSC_HASH,
-          ),
+          .createOrder({
+            supplier: f.supplier.address,
+            bank: f.bank.address,
+            fuelGrade: "VLSFO",
+            qtyKg: tonnes(500),
+            pricePerTonne: sgd(980),
+            toleranceBps: 50,
+            retentionBps: 1000,
+            deliveryDeadline: deadline,
+            retentionWindow: 120,
+            dscHash: DSC_HASH,
+            anchorage: ANCHORAGE.EASTERN_PETROLEUM_B,
+          }),
       )
         .to.be.revertedWithCustomError(f.order, "AccountSuspended")
         .withArgs(f.buyer.address);
@@ -267,18 +269,19 @@ describe("ParticipantRegistry", () => {
       await expect(
         f.order
           .connect(f.outsider)
-          .createOrder(
-            f.supplier.address,
-            f.bank.address,
-            "VLSFO",
-            tonnes(500),
-            sgd(980),
-            50,
-            1000,
-            deadline,
-            120,
-            DSC_HASH,
-          ),
+          .createOrder({
+            supplier: f.supplier.address,
+            bank: f.bank.address,
+            fuelGrade: "VLSFO",
+            qtyKg: tonnes(500),
+            pricePerTonne: sgd(980),
+            toleranceBps: 50,
+            retentionBps: 1000,
+            deliveryDeadline: deadline,
+            retentionWindow: 120,
+            dscHash: DSC_HASH,
+            anchorage: ANCHORAGE.EASTERN_PETROLEUM_B,
+          }),
       )
         .to.be.revertedWithCustomError(f.order, "NotAuthorized")
         .withArgs(f.roles.BUYER, f.outsider.address);

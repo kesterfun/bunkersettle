@@ -38,6 +38,30 @@ enum DocType {
     DSI
 }
 
+/// @dev Singapore bunkering anchorage nominated as the place of delivery.
+enum Anchorage {
+    WESTERN_PETROLEUM_A,
+    WESTERN_PETROLEUM_B,
+    EASTERN_PETROLEUM_A,
+    EASTERN_PETROLEUM_B
+}
+
+/// @dev Order terms passed to BunkerOrder.createOrder. `anchorage` is a raw uint8 so an
+///      out-of-range value reverts InvalidParameter("anchorage") instead of a bare ABI decode revert.
+struct OrderParams {
+    address supplier;
+    address bank;
+    string fuelGrade;
+    uint256 qtyKg;
+    uint256 pricePerTonne;
+    uint16 toleranceBps;
+    uint16 retentionBps;
+    uint256 deliveryDeadline;
+    uint256 retentionWindow;
+    bytes32 dscHash;
+    uint8 anchorage;
+}
+
 /// @dev Bunker order record held by BunkerOrder.
 struct Order {
     uint256 id;
@@ -60,6 +84,7 @@ struct Order {
     uint256 disputeId;
     bytes32 dscHash;
     uint256 refundedAmount;
+    Anchorage anchorage;
 }
 
 bytes32 constant ROLE_ADMIN = keccak256("ADMIN");
