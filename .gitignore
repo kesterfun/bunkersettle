@@ -23,3 +23,7 @@ build/
 *.log
 .DS_Store
 Thumbs.db
+
+# Submission bundle / UI build
+submission/
+ui/dist/
