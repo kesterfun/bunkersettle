@@ -1,0 +1,18 @@
+.cf {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: 1.5rem;
+  align-items: start;
+}
+.cf-hash {
+  word-break: break-all;
+}
+.cf-note {
+  color: var(--grey);
+  font-size: 0.8rem;
+}
+@media (max-width: 56rem) {
+  .cf {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

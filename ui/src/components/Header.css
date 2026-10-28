@@ -1,0 +1,116 @@
+.hd {
+  border-bottom: var(--rule);
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.hd-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.8rem var(--gutter);
+  border-bottom: var(--rule);
+}
+.hd-brand {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+}
+.hd-logo {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 2rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.hd-bravo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.hd-account {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+.hd-who {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.hd-who b {
+  font-size: 1.05rem;
+}
+.hd-idx {
+  color: var(--grey);
+  font-weight: 700;
+}
+.hd-role {
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.5rem;
+}
+.hd-suspended {
+  background: var(--red);
+}
+.hd-addr,
+.hd-net {
+  font-size: 0.82rem;
+  color: var(--grey);
+}
+.hd-warn {
+  font-weight: 700;
+  color: var(--red);
+}
+.hd-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.5rem var(--gutter);
+}
+.hd-tab {
+  font: 700 0.95rem var(--f-body);
+  background: none;
+  border: none;
+  border-bottom: 4px solid transparent;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  color: var(--ink);
+}
+.hd-tab:hover {
+  border-bottom-color: var(--soft);
+}
+.hd-tab[aria-current="page"] {
+  border-bottom-color: var(--yellow);
+}
+.hd-spacer {
+  flex: 1;
+}
+.hd-ff {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-right: 0.5rem;
+}
+.hd-paused {
+  background: var(--red);
+  color: #ffffff;
+  font-weight: 700;
+  padding: 0.4rem var(--gutter);
+}

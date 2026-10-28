@@ -68,3 +68,18 @@ Choices made during the build that SPEC.md does not cover.
 - **Anchorage validation.** `OrderParams.anchorage` is a raw `uint8`, checked against `type(Anchorage).max`, so a bad value reverts `InvalidParameter("anchorage")` instead of a bare ABI decode revert.
 - **Scenario anchorages.** `scripts/scenarios.ts` places S1 at Eastern Petroleum B, S2 at Western Petroleum A, S3 at Eastern Petroleum A and S4 at Western Petroleum B, so the chart shows the demo orders spread out.
 - **Tests.** 196 tests (2 new: anchorage stored and emitted; out-of-range anchorage reverts), 99.33% lines.
+
+## Milestone 5 – UI
+
+- **Stack versions.** React 18.3, ethers 6.13, Vite 5.4, TypeScript pinned `~5.8.3` like the root package.
+- **Reads go to the node, writes go through MetaMask.** Reads use a `JsonRpcProvider` on `http://127.0.0.1:8545` (`VITE_RPC_URL` overrides), so the board, chart and activity log work before a wallet connects. Only `send()` uses MetaMask's signer.
+- **One poll per block.** On every new block the UI reads all orders, disputes, balances and the connected account's roles, then fetches the new logs from all seven contracts with one `getLogs` call and decodes them with each contract's ABI. That keeps the activity log and on-screen state in step, instead of running separate `contract.on` listeners that could arrive before the state read.
+- **Participants come from events.** The participant list (names and roles for dropdowns and labels) is built from `ParticipantRegistered` / `ParticipantRevoked` events, since the registry has no enumeration function.
+- **Chain time.** Countdowns use an estimated chain clock: wall clock plus the largest `block.timestamp − now` offset seen. That follows `evm_increaseTime` from the Fast-forward buttons.
+- **Errors.** Every custom error from every ABI (including OpenZeppelin's) is merged into one `Interface`. A failed transaction's revert data is searched for anywhere in the ethers/MetaMask error object and shown as `ErrorName(arg=value, …)`, with role hashes shown by name.
+- **No hidden reverts.** Actions are shown to every account. The "UI checks" toggle (default off, saved in localStorage) is the only thing that disables buttons.
+- **Single light theme.** The UI deliberately has one high-contrast light theme for projectors (SPEC 8); "Projector mode" raises the root font size from 16 px to 20 px and everything scales in rem.
+- **Market panel source.** The data.gov.sg API answers browser calls, so the panel loads live data and falls back to `ui/public/bunker-sales.json` (written by `npm run fetch-sales`) when the call fails. Field names: `month`, `bunker_type`, `bunker_sales`.
+- **Market panel unit.** The dataset metadata says "tonnes", but monthly totals around 4,700 only match Singapore's real sales (about 4.7 million tonnes a month) if they are thousand tonnes, which is how MPA publishes these figures. The panel labels the values "thousand tonnes".
+- **Contract names in the UI.** Addresses that belong to a deployed contract show as "BunkerOrder contract" etc., so automatic disputes read as opened by BunkerOrder.
+- **Browser end-to-end check.** Scenarios 1–5, evidence submission, Fast-forward and `cancelExpired` were run through the UI in a headless browser with a stand-in for MetaMask that forwards to the Hardhat node's unlocked accounts. The resulting balances matched `npm run scenarios` exactly. A real MetaMask run is still the acceptance step.

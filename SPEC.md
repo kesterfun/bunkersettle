@@ -280,6 +280,7 @@ npm run deploy      hardhat run scripts/deploy.ts --network localhost && hardhat
 npm run scenarios   hardhat run scripts/scenarios.ts --network localhost
 npm run ui          cd ui && npm run dev
 npm run submission  hardhat run scripts/export-submission.ts
+npm run fetch-sales ts-node scripts/fetch-sales.ts   (refreshes ui/public/bunker-sales.json)
 ```
 
 ---

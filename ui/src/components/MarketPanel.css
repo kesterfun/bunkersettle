@@ -1,0 +1,86 @@
+.mp {
+  min-width: 0;
+}
+.mp-source {
+  font-size: 0.8rem;
+  color: var(--grey);
+}
+.mp-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem 2rem;
+}
+.mp-yoy {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-top: 0.35rem;
+}
+.mp-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.mp-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.mp-chart-wrap {
+  width: 100%;
+  min-width: 0;
+}
+.mp-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.mp-grid {
+  stroke: var(--soft);
+  stroke-width: 1.5;
+}
+.mp-axis {
+  font-family: var(--f-mono);
+  font-size: 0.75rem;
+  fill: var(--grey);
+  font-variant-numeric: tabular-nums;
+}
+.mp-unit {
+  font-family: var(--f-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  fill: var(--grey);
+}
+.mp-total-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.mp-grade-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.mp-latest-dot {
+  fill: var(--yellow);
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+.mp-latest-label {
+  font-family: var(--f-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  fill: var(--ink);
+}
+.mp-num {
+  text-align: right;
+}
+.mp-note {
+  font-size: 0.8rem;
+  color: var(--grey);
+}

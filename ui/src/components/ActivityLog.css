@@ -1,0 +1,29 @@
+.al {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-width: 0;
+}
+.al-filter {
+  max-width: 22rem;
+}
+.al-name {
+  font-weight: 700;
+  white-space: nowrap;
+}
+.al-sw {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-right: 0.45rem;
+}
+.al-args {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.9rem;
+  font-family: var(--f-mono);
+  font-size: 0.85rem;
+}
+.al-k {
+  color: var(--grey);
+}

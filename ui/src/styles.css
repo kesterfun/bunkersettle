@@ -1,0 +1,392 @@
+/*
+  BunkerSettle "signal board": white ground, thick black rules, signal-flag colours.
+  One deliberate light theme so it reads on a projector (SPEC 8). Sizes are in rem so
+  html.projector scales the whole app.
+*/
+:root {
+  color-scheme: light;
+  --ink: #0b0f14;
+  --grey: #5c6670;
+  --soft: #eef1f4;
+  --bg: #ffffff;
+  --pale: #fff6cc;
+  --blue: #1b4db1;
+  --yellow: #f4c20d;
+  --yellow-dark: #e2b000;
+  --red: #d7262e;
+  --green: #1e7d4f;
+
+  /* harbour chart */
+  --water: #d6eaf4;
+  --deep: #bcdbec;
+  --land: #f0e2b6;
+  --magenta: #a3127a;
+  --chart-ink: #1a2a3a;
+  --sounding: #4a6a80;
+
+  --f-display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --f-body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "Red Hat Mono", ui-monospace, Consolas, monospace;
+  --f-stamp: "Archivo Narrow", "Arial Narrow", sans-serif;
+  --f-chart: "Spectral", Georgia, serif;
+  --f-chart-ui: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+
+  --rule: 3px solid var(--ink);
+  --gutter: 1.25rem;
+}
+
+html {
+  font-size: 16px;
+}
+html.projector {
+  font-size: 20px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+p {
+  margin: 0;
+}
+code,
+.mono {
+  font-family: var(--f-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- layout */
+.app-main {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 1.5rem var(--gutter) 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.page-title {
+  font-family: var(--f-display);
+  font-weight: 900;
+  font-size: 2.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+.page-title small {
+  display: block;
+  font-family: var(--f-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--grey);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-top: 0.35rem;
+}
+
+/* ---------------------------------------------------------------- building blocks */
+.panel {
+  border: var(--rule);
+  background: var(--bg);
+}
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  border-bottom: var(--rule);
+}
+.panel-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey);
+}
+
+.figure {
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: 2.1rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.figure .unit {
+  font-family: var(--f-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--grey);
+  margin-left: 0.3rem;
+}
+
+.btn {
+  font: 700 1rem var(--f-body);
+  background: var(--ink);
+  color: #ffffff;
+  border: 3px solid var(--ink);
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+}
+.btn:hover {
+  background: #26303a;
+}
+.btn:disabled {
+  background: var(--soft);
+  border-color: var(--soft);
+  color: var(--grey);
+  cursor: not-allowed;
+}
+.btn-ghost {
+  background: var(--bg);
+  color: var(--ink);
+}
+.btn-ghost:hover {
+  background: var(--soft);
+}
+.btn-danger {
+  background: var(--red);
+  border-color: var(--red);
+}
+.btn-danger:hover {
+  background: #b81f26;
+}
+.btn-sm {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.7rem;
+  border-width: 2px;
+}
+
+.toggle {
+  font: 700 0.85rem var(--f-body);
+  background: var(--bg);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+}
+.toggle[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+/* status chip: tone classes set the colour */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 2px solid var(--ink);
+  padding: 0.05rem 0.5rem;
+  white-space: nowrap;
+}
+.chip::before {
+  content: "";
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--tone);
+}
+.tone-action {
+  --tone: var(--yellow);
+  --tone-text: var(--ink);
+}
+.tone-progress {
+  --tone: var(--blue);
+  --tone-text: #ffffff;
+}
+.tone-disputed {
+  --tone: var(--red);
+  --tone-text: #ffffff;
+}
+.tone-done {
+  --tone: var(--green);
+  --tone-text: #ffffff;
+}
+.tone-void {
+  --tone: var(--grey);
+  --tone-text: #ffffff;
+}
+
+/* rubber stamp for the current status */
+.stamp {
+  display: inline-block;
+  flex: none;
+  border: 0.2rem solid currentColor;
+  color: var(--stamp-color, var(--blue));
+  font-family: var(--f-stamp);
+  font-weight: 700;
+  font-size: 1.4rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.65rem;
+  border-radius: 0.2rem;
+  transform: rotate(-8deg);
+  opacity: 0.9;
+  text-align: center;
+  line-height: 1.1;
+}
+.stamp small {
+  display: block;
+  font-size: 0.55em;
+  letter-spacing: 0.06em;
+}
+.stamp.tone-action {
+  --stamp-color: #9a7a00;
+}
+.stamp.tone-progress {
+  --stamp-color: var(--blue);
+}
+.stamp.tone-disputed {
+  --stamp-color: var(--red);
+}
+.stamp.tone-done {
+  --stamp-color: var(--green);
+}
+.stamp.tone-void {
+  --stamp-color: var(--grey);
+}
+.stamp.thump {
+  animation: stamp-thump 0.45s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+@keyframes stamp-thump {
+  0% {
+    transform: rotate(-8deg) scale(1.9);
+    opacity: 0;
+  }
+  100% {
+    transform: rotate(-8deg) scale(1);
+    opacity: 0.9;
+  }
+}
+
+/* forms */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.field > span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey);
+}
+.field input,
+.field select,
+.field textarea {
+  font: 600 1rem var(--f-body);
+  color: var(--ink);
+  background: var(--bg);
+  border: 2px solid var(--ink);
+  padding: 0.45rem 0.6rem;
+  min-width: 0;
+  width: 100%;
+}
+.field textarea {
+  font-family: var(--f-mono);
+  font-weight: 400;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+.field input[type="range"] {
+  accent-color: var(--ink);
+  border: none;
+  padding: 0;
+}
+.field small {
+  color: var(--grey);
+  font-size: 0.8rem;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.9rem 1rem;
+}
+
+.demo-only {
+  display: inline-block;
+  background: repeating-linear-gradient(45deg, var(--yellow) 0 0.5rem, var(--yellow-dark) 0.5rem 1rem);
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.6rem;
+  border: 2px solid var(--ink);
+}
+
+.empty {
+  border: 2px dashed var(--grey);
+  padding: 1.5rem;
+  color: var(--grey);
+  text-align: center;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+table.data th {
+  text-align: left;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey);
+  border-bottom: var(--rule);
+  padding: 0.35rem 0.6rem 0.35rem 0;
+}
+table.data td {
+  padding: 0.5rem 0.6rem 0.5rem 0;
+  border-bottom: 1px solid var(--soft);
+  vertical-align: top;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

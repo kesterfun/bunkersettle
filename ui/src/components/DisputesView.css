@@ -1,0 +1,37 @@
+.dv-title {
+  font-family: var(--f-display);
+  font-weight: 800;
+  font-size: 1.4rem;
+  text-transform: uppercase;
+}
+.dv-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  margin: 0;
+}
+.dv-facts dd {
+  margin: 0.2rem 0 0;
+  font-weight: 600;
+}
+.dv-forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+.dv-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-top: var(--rule);
+  padding-top: 0.75rem;
+}
+.dv-hash {
+  word-break: break-all;
+}
+.dv-split {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}

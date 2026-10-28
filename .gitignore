@@ -30,3 +30,6 @@ ui/dist/
 
 # Generated deployment manifest (npm run deploy)
 ui/src/deployments.json
+
+# TypeScript incremental build info
+*.tsbuildinfo

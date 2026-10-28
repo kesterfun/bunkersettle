@@ -12,7 +12,8 @@
     "deploy": "hardhat run scripts/deploy.ts --network localhost && hardhat run scripts/seed.ts --network localhost",
     "scenarios": "hardhat run scripts/scenarios.ts --network localhost",
     "ui": "cd ui && npm run dev",
-    "submission": "hardhat run scripts/export-submission.ts"
+    "submission": "hardhat run scripts/export-submission.ts",
+    "fetch-sales": "ts-node scripts/fetch-sales.ts"
   },
   "repository": {
     "type": "git",

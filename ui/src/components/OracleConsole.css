@@ -1,0 +1,39 @@
+.oc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+.oc-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.25rem;
+  font-weight: 600;
+}
+.oc-quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.oc-hint {
+  color: var(--grey);
+  font-size: 0.8rem;
+}
+.oc-hash {
+  word-break: break-all;
+}
+.oc-radio {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  font-weight: 600;
+}
+.oc-radio legend {
+  padding: 0;
+  margin-bottom: 0.3rem;
+}
