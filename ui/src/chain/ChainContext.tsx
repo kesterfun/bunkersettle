@@ -65,6 +65,8 @@ export interface ChainState {
   walletChainId: number | null;
   wrongNetwork: boolean;
   connect(): Promise<void>;
+  /** Opens MetaMask's account picker for this site, so another account can be connected and selected. */
+  changeAccount(): Promise<void>;
   switchNetwork(): Promise<void>;
   /** Registry data for the connected account. */
   me: Me | null;
@@ -221,6 +223,18 @@ export function ChainProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(async () => {
     if (!window.ethereum) return;
     const a = (await window.ethereum.request({ method: "eth_requestAccounts" })) as string[];
+    setAccount(a[0] ?? null);
+  }, []);
+
+  const changeAccount = useCallback(async () => {
+    const eth = window.ethereum;
+    if (!eth) return;
+    try {
+      await eth.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] });
+    } catch {
+      return; // closed the picker
+    }
+    const a = (await eth.request({ method: "eth_accounts" })) as string[];
     setAccount(a[0] ?? null);
   }, []);
 
@@ -524,6 +538,7 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     walletChainId,
     wrongNetwork: walletChainId !== null && walletChainId !== EXPECTED_CHAIN_ID,
     connect,
+    changeAccount,
     switchNetwork,
     me,
     blockNumber,

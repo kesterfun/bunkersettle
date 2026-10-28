@@ -54,6 +54,9 @@ export function Header() {
               {c.me?.suspended && <span className="hd-role hd-suspended">Suspended</span>}
               <span className="hd-addr mono">{shortHex(c.account)}</span>
               <span className="hd-net">Chain 31337 · block {c.blockNumber}</span>
+              <button className="btn btn-sm btn-ghost" type="button" onClick={() => void c.changeAccount()}>
+                Change account
+              </button>
             </div>
           )}
         </div>

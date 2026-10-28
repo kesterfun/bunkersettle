@@ -64,3 +64,19 @@
   .os-title h3{font-size:2.2rem}
 }
 @media (prefers-reduced-motion:reduce){.os-fill,.os-ret,.os-pipe>div{transition:none}}
+.os-others {
+  border-top: 2px dashed var(--soft);
+  padding-top: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.os-others > summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--grey);
+}
+.os-others[open] > summary {
+  margin-bottom: 0.4rem;
+}

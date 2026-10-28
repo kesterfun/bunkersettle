@@ -13,6 +13,8 @@ import {
   fundingAmount,
   isBunkering,
   isMyTurn,
+  nextStep,
+  ROLE_LABEL,
   shortHex,
   type OrderView,
   type StatusName,
@@ -71,6 +73,8 @@ interface Act {
   label: string;
   who: ReactNode;
   turn: boolean;
+  /** The connected account is a party allowed to take this action (ignores timers). */
+  party: boolean;
   can: boolean;
   reason: string;
   danger?: boolean;
@@ -110,7 +114,7 @@ export function OrderScreen() {
   if (st === "Created") {
     acts.push({
       key: "accept", label: "Accept order", who: person("Supplier", o.supplier), turn: turn && mine(o.supplier),
-      can: mine(o.supplier), reason: "Only the order's supplier can accept.",
+      party: mine(o.supplier), can: mine(o.supplier), reason: "Only the order's supplier can accept.",
       run: (c) => c.BunkerOrder.acceptOrder(o.id),
     });
   }
@@ -118,13 +122,13 @@ export function OrderScreen() {
     if (allowance < fundingAmount(o)) {
       acts.push({
         key: "approve", label: "Approve mSGD for escrow", who: person("Bank", o.bank), turn: mine(o.bank),
-        can: mine(o.bank), reason: "Only the bank needs to approve its own mSGD.",
+        party: mine(o.bank), can: mine(o.bank), reason: "Only the bank needs to approve its own mSGD.",
         run: (c) => c.MockSGD.approve(ADDRESSES.PaymentEscrow, fundingAmount(o)),
       });
     }
     acts.push({
       key: "fund", label: "Fund order", who: person("Bank", o.bank), turn: turn && mine(o.bank),
-      can: mine(o.bank) && allowance >= fundingAmount(o),
+      party: mine(o.bank), can: mine(o.bank) && allowance >= fundingAmount(o),
       reason: mine(o.bank) ? "Approve mSGD for escrow first." : "Only the order's bank can fund.",
       run: (c) => c.BunkerOrder.fundOrder(o.id),
     });
@@ -132,31 +136,56 @@ export function OrderScreen() {
   if (st === "Created" || st === "Accepted") {
     acts.push({
       key: "cancel", label: "Cancel order", who: person("Buyer", o.buyer), turn: false, danger: true,
-      can: mine(o.buyer), reason: "Only the order's buyer can cancel.",
+      party: mine(o.buyer), can: mine(o.buyer), reason: "Only the order's buyer can cancel.",
       run: (c) => c.BunkerOrder.cancelOrder(o.id),
     });
   }
   if (st === "Funded") {
     acts.push({
       key: "expire", label: "Cancel expired order", who: "Anyone", turn: false,
-      can: !!me && now > o.deliveryDeadline, reason: "The delivery deadline has not passed.",
+      party: !!me, can: !!me && now > o.deliveryDeadline, reason: "The delivery deadline has not passed.",
       run: (c) => c.BunkerOrder.cancelExpired(o.id),
     });
   }
   if (st === "QuantityApproved") {
     acts.push({
       key: "release", label: "Release retention after timeout", who: "Anyone", turn: false,
-      can: !!me && now >= o.approvedAt + o.retentionWindow, reason: "The retention window is still running.",
+      party: !!me, can: !!me && now >= o.approvedAt + o.retentionWindow, reason: "The retention window is still running.",
       run: (c) => c.BunkerOrder.releaseAfterTimeout(o.id),
     });
   }
   if (st === "Funded" || st === "QuantityApproved") {
     acts.push({
       key: "dispute", label: "Open dispute (manual)", who: "Buyer or Supplier", turn: false, danger: true,
-      can: buyerOrSupplier, reason: "Only the buyer or supplier can open a manual dispute.",
+      party: buyerOrSupplier, can: buyerOrSupplier, reason: "Only the buyer or supplier can open a manual dispute.",
       run: (c) => c.DisputeManager.openDispute(o.id, 3),
     });
   }
+
+  // The connected account's own actions come first; the rest stay reachable (collapsed) so the
+  // demo can still trigger a revert from the wrong account (SPEC 8: never hide contract reverts).
+  const myActs = acts.filter((a) => a.party);
+  const otherActs = acts.filter((a) => !a.party);
+  const next = nextStep(o);
+  const renderAct = (a: Act) => {
+    const blocked = uiChecks && !a.can;
+    return (
+      <div key={a.key} className={`os-act${a.turn ? " os-act-turn" : ""}`}>
+        <button
+          className={`btn${a.danger ? " btn-danger" : ""}${a.party ? "" : " btn-ghost"}`}
+          disabled={blocked}
+          onClick={() => void send(a.label, a.run)}
+        >
+          {a.label}
+        </button>
+        <span className="os-act-who">
+          {a.turn && <b className="os-turn">Your turn</b>}
+          {a.who}
+          {blocked && <small>{a.reason}</small>}
+        </span>
+      </div>
+    );
+  };
 
   const showDeliveryClock = st === "Created" || st === "Accepted" || st === "Funded";
   const retentionEnd = o.approvedAt + o.retentionWindow;
@@ -268,25 +297,19 @@ export function OrderScreen() {
         <div className="os-actions">
           <span className="label">Actions</span>
           {acts.length === 0 && st !== "Disputed" && <p className="os-hint">No actions left on this order.</p>}
-          {acts.map((a) => {
-            const blocked = uiChecks && !a.can;
-            return (
-              <div key={a.key} className={`os-act${a.turn ? " os-act-turn" : ""}`}>
-                <button
-                  className={`btn${a.danger ? " btn-danger" : ""}`}
-                  disabled={blocked}
-                  onClick={() => void send(a.label, a.run)}
-                >
-                  {a.label}
-                </button>
-                <span className="os-act-who">
-                  {a.turn && <b className="os-turn">Your turn</b>}
-                  {a.who}
-                  {blocked && <small>{a.reason}</small>}
-                </span>
-              </div>
-            );
-          })}
+          {acts.length > 0 && myActs.length === 0 && (
+            <p className="os-hint">
+              Nothing for {me ? nameOf(me.address) : "this account"} to do here.
+              {next && <> Next: {next.label} ({ROLE_LABEL[next.role]}).</>}
+            </p>
+          )}
+          {myActs.map(renderAct)}
+          {otherActs.length > 0 && (
+            <details className="os-others">
+              <summary>Other parties' actions ({otherActs.length}). Press one to demo the revert.</summary>
+              {otherActs.map(renderAct)}
+            </details>
+          )}
           {(st === "Funded" || st === "QuantityApproved") && (
             <button className="btn btn-ghost" onClick={() => go("oracle", o.id)}>
               Oracle console ({st === "Funded" ? "meter / e-BDN" : "lab"})
