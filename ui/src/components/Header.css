@@ -29,6 +29,13 @@
   line-height: 1;
 }
 .hd-bravo {
+  font-family: var(--f-body);
+  color: var(--ink);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.15rem 0;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -36,6 +43,9 @@
   font-size: 0.82rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+.hd-bravo:hover {
+  border-bottom-color: var(--red);
 }
 .hd-account {
   display: flex;

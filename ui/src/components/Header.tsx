@@ -16,17 +16,22 @@ const NAV: { view: View; label: string }[] = [
 /** Brand, navigation, connected account with registry name and roles, network check and demo toggles. */
 export function Header() {
   const c = useChain();
-  const bunkering = c.orders.some(isBunkering);
+  const bunkering = c.orders.filter(isBunkering).length;
 
   return (
     <header className="hd">
       <div className="hd-top">
         <div className="hd-brand">
           <span className="hd-logo">BunkerSettle</span>
-          {bunkering && (
-            <span className="hd-bravo" title="Bravo flag: at least one order is mid-bunkering">
-              <BravoFlag size={1.5} /> Bunkering in progress
-            </span>
+          {bunkering > 0 && (
+            <button
+              type="button"
+              className="hd-bravo"
+              title="Bravo flag: orders that are funded but not yet settled. Opens the harbour chart."
+              onClick={() => c.go("harbour")}
+            >
+              <BravoFlag size={1.5} /> Bunkering in progress · {bunkering} {bunkering === 1 ? "order" : "orders"}
+            </button>
           )}
         </div>
 
