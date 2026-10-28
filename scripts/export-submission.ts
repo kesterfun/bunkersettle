@@ -131,8 +131,12 @@ function totalSize(files: string[]): number {
 }
 
 function main(): void {
-  fs.rmSync(OUT_DIR, { recursive: true, force: true });
+  // Empty the folder instead of deleting it: on Windows an Explorer window or editor that has
+  // submission/ open locks the directory itself, but not its contents.
   fs.mkdirSync(OUT_DIR, { recursive: true });
+  for (const entry of fs.readdirSync(OUT_DIR)) {
+    fs.rmSync(path.join(OUT_DIR, entry), { recursive: true, force: true });
+  }
 
   exportContracts();
 

@@ -85,3 +85,8 @@ Choices made during the build that SPEC.md does not cover.
 - **Browser end-to-end check.** Scenarios 1–5, evidence submission, Fast-forward and `cancelExpired` were run through the UI in a headless browser with a stand-in for MetaMask that forwards to the Hardhat node's unlocked accounts. The resulting balances matched `npm run scenarios` exactly. A real MetaMask run is still the acceptance step.
 - **Actions by party.** The order screen lists the connected account's own actions first. Other parties' actions sit in a collapsed "Other parties' actions" section, still clickable, so the demo can show a `NotOrderParty` / `NotAuthorized` revert (SPEC 8 forbids hiding reverts). "Anyone" actions (`cancelExpired`, `releaseAfterTimeout`) count as the connected account's own.
 - **Change account.** The header's "Change account" button calls `wallet_requestPermissions` for `eth_accounts`, opening MetaMask's picker so another demo account can be connected and selected without leaving the app.
+
+## Milestone 6 – Docs and submission
+
+- **Saved sales data not in the bundle.** `npm run submission` exports UI source and config only, so `ui/public/bunker-sales.json` (a 460 KB data file) is left out. The Market view still loads live data from data.gov.sg; `npm run fetch-sales` recreates the fallback file.
+- **Remix example deadline.** The README's Remix `createOrder` example uses 1893456000 (1 Jan 2030), so it stays valid for the whole course.
