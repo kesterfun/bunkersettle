@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { ContractTransactionResponse } from "ethers";
 import { ADDRESSES, useChain, useChainNow, type Contracts } from "../chain/ChainContext";
 import {
@@ -22,7 +22,7 @@ import {
 import { ActivityLog } from "./ActivityLog";
 import { BravoFlag, Stamp, Who } from "./ui";
 import { EscrowTank } from "./EscrowTank";
-import { ScenarioStepper } from "./ScenarioStepper";
+import { DemoGuide, NextStepBox } from "./ScenarioStepper";
 import "./OrderScreen.css";
 
 const ZERO_HASH = /^0x0*$/;
@@ -84,6 +84,7 @@ interface Act {
 export function OrderScreen() {
   const { orders, disputes, me, allowance, orderId, go, send, uiChecks, nameOf, blockNumber } = useChain();
   const now = useChainNow();
+  const [guideOpen, setGuideOpen] = useState(false);
 
   if (orders.length === 0) {
     return (
@@ -196,7 +197,7 @@ export function OrderScreen() {
 
   return (
     <div className="os-grid">
-      <ScenarioStepper order={o} />
+      <DemoGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
 
       <section className="os-main">
         <div className="os-bar">
@@ -210,6 +211,10 @@ export function OrderScreen() {
               ))}
             </select>
           </label>
+          <button type="button" className="btn btn-sm btn-ghost os-guide-btn" onClick={() => setGuideOpen(true)}>
+            Demo guide
+          </button>
+          <span className="os-bar-gap" />
           {isBunkering(o) && (
             <span className="os-bravo">
               <BravoFlag size={2.4} /> Bunkering in progress
@@ -293,6 +298,8 @@ export function OrderScreen() {
             </p>
           )}
         </div>
+
+        <NextStepBox order={o} />
 
         <div className="os-actions">
           <span className="label">Actions</span>

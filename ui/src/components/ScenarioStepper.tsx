@@ -28,7 +28,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: "short",
     title: "2. Short delivery",
-    steps: ["Create, accept and fund a new order", "Meter #4 submits 480 t, e-BDN #5 submits 500 t", "Order goes to Disputed (out of tolerance)"],
+    steps: ["Create, accept and fund a new order", "Meter #4 and e-BDN #5 both submit 480 t (Scenario 2 quick-fill)", "Order goes to Disputed (out of tolerance)"],
   },
   {
     id: "quality",
@@ -55,22 +55,13 @@ function load(): Record<string, boolean> {
   }
 }
 
-/** Sidebar: what happens next on this order, plus the five SPEC 9 demo scenarios as a checklist. */
-export function ScenarioStepper({ order: o }: { order: OrderView | null }) {
+/** Who acts next on this order, and with which account. Sits above the order's actions. */
+export function NextStepBox({ order: o }: { order: OrderView }) {
   const { nameOf } = useChain();
-  const [done, setDone] = useState<Record<string, boolean>>(load);
-  useEffect(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(done));
-    } catch {
-      // storage unavailable; ticks just won't persist
-    }
-  }, [done]);
-
-  const step = o ? nextStep(o) : null;
+  const step = nextStep(o);
   const idx = step?.actor ? accountIndex(step.actor) : -1;
   return (
-    <aside className="os-steps" aria-label="Scenario stepper">
+    <div className="os-nextwrap">
       <span className="label">Next for this order</span>
       {step ? (
         <div className="os-next">
@@ -82,10 +73,40 @@ export function ScenarioStepper({ order: o }: { order: OrderView | null }) {
           </span>
         </div>
       ) : (
-        <div className="os-next os-next-none">{o ? "Nothing pending on the main path." : "No order selected."}</div>
+        <div className="os-next os-next-none">Nothing pending on the main path.</div>
       )}
+    </div>
+  );
+}
 
-      <span className="label">Demo scenarios</span>
+/** Slide-out demo guide: the five SPEC 9 scenarios as a checklist. Closed by default. */
+export function DemoGuide({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [done, setDone] = useState<Record<string, boolean>>(load);
+  useEffect(() => {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(done));
+    } catch {
+      // storage unavailable; ticks just won't persist
+    }
+  }, [done]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return (
+    <>
+      <button type="button" className="os-scrim" aria-label="Close demo guide" onClick={onClose} />
+      <aside className="os-steps" role="dialog" aria-modal="true" aria-label="Demo guide">
+        <div className="os-steps-head">
+          <span className="label">Demo guide</span>
+          <button type="button" className="btn btn-sm btn-ghost" onClick={onClose} autoFocus>
+            Close
+          </button>
+        </div>
       <ol className="os-sc">
         {SCENARIOS.map((s) => (
           <li key={s.id} className={done[s.id] ? "os-sc-done" : undefined}>
@@ -105,8 +126,9 @@ export function ScenarioStepper({ order: o }: { order: OrderView | null }) {
           </li>
         ))}
       </ol>
-      <p className="os-hint">{ACCOUNTS}</p>
-      <p className="os-hint">Waiting on a timer? Use Fast-forward in the header.</p>
-    </aside>
+        <p className="os-hint">{ACCOUNTS}</p>
+        <p className="os-hint">Waiting on a timer? Use Fast-forward in the header.</p>
+      </aside>
+    </>
   );
 }
