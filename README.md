@@ -27,7 +27,7 @@ Run these in order. Keep the node running in its own terminal.
 |---|---|---|
 | 1 | `npm run node` | Starts a local Hardhat chain at `http://127.0.0.1:8545` (chain ID 31337). Prints 20 test accounts and private keys. Leave it running. |
 | 2 | `npm run deploy` | Deploys and wires the seven contracts and writes `ui/src/deployments.json`. Then it registers the demo participants, mints 5,000,000 mSGD to the bank and approves the escrow. |
-| 3 (optional) | `npm run scenarios` | Runs demo scenarios 1 to 5 headless and prints balances after each step. Good for rehearsal. |
+| 3 (optional) | `npm run scenarios` | Runs demo scenarios 1 to 6 headless and prints balances after each step. Good for rehearsal. |
 | 4 | `npm run ui` | Starts the Vite app at http://localhost:5173. |
 
 The UI needs `npm run deploy` to have run first. It imports `ui/src/deployments.json`, which is git-ignored and changes on every deploy. If you restart the node, run `npm run deploy` again.
@@ -42,7 +42,7 @@ The UI needs `npm run deploy` to have run first. It imports `ui/src/deployments.
 | `npm run gas` | Runs the tests with the gas reporter on. |
 | `npm run node` | Starts the local chain. |
 | `npm run deploy` | Deploys, wires and seeds (see above). |
-| `npm run scenarios` | Runs the five demo scenarios headless. |
+| `npm run scenarios` | Runs the six demo scenarios headless (1 to 6). |
 | `npm run ui` | Starts the Vite dev server. |
 | `npm run fetch-sales` | Refreshes `ui/public/bunker-sales.json` from data.gov.sg (the fallback for the Market view). |
 | `npm run submission` | Builds the submission bundle in `submission/` (see below). |
@@ -102,6 +102,27 @@ Header controls:
 - **Projector mode** enlarges the type.
 
 A failed transaction shows the decoded custom error in a toast, for example `NotAuthorized(role=METER_ORACLE, account=0x2361...)`.
+
+## Signed oracle submissions (EIP-712)
+
+The meter oracle, e-BDN provider and lab can sign their submission off-chain instead of sending it. Signing costs no gas. Any account then relays the signature on-chain. The contract recovers the signer, checks that the signer holds the oracle's role, and records the signer in the event. Changing any field after signing breaks the signature, so the relayer cannot alter the submission. A signature from an account without the role reverts with `NotAuthorized`, and one past its deadline reverts with `SignatureExpired`.
+
+| Function | Signed by | Contract |
+|---|---|---|
+| `submitMeterReadingBySig(id, qtyKg, ticketHash, deadline, signature)` | Meter oracle (#4) | `DeliveryRecord` |
+| `submitEBDNBySig(id, qtyKg, ebdnHash, deadline, signature)` | e-BDN provider (#5) | `DeliveryRecord` |
+| `submitLabResultBySig(id, passed, reportHash, deadline, signature)` | Fuel lab (#6) | `QualityRecord` |
+
+`deadline` is a Unix time in seconds. The demo uses the latest block time plus 900 s. The direct functions (`submitMeterReading`, `submitEBDN`, `submitLabResult`) work as before.
+
+To try it in the UI (Oracle console):
+
+1. As #4, open Oracle console, pick a funded order, fill in the meter reading and press **Sign only (no gas)**. MetaMask asks for a signature, not a transaction.
+2. Repeat as #5 for the e-BDN and as #6 for the lab result. Each signed item appears under **Signed submissions (EIP-712)**.
+3. Click **Change account** and switch to #8 (unregistered).
+4. In **Signed submissions (EIP-712)**, press **Relay** for each item. Each relay is a normal transaction from #8. The event shows #4, #5 or #6 as the signer.
+
+`npm run scenarios` runs the same flow headless as scenario 6, including one rejected relay.
 
 ## Demo scenarios in the UI
 
@@ -172,7 +193,7 @@ Use this if you cannot run Node. Remix has no time travel, so show the retention
 
 1. Create the same folder layout in Remix: `contracts/`, `contracts/interfaces/`, `contracts/base/`, `contracts/mocks/`. Copy each `.sol` file into the matching folder.
 2. OpenZeppelin imports resolve automatically from npm in Remix.
-3. Compile with Solidity 0.8.24 and the optimizer on (200 runs).
+3. Compile with Solidity 0.8.24 and the optimizer on (200 runs). Set the EVM version to `cancun`.
 
 ### 2. Pick accounts
 
@@ -248,6 +269,8 @@ Order IDs start at 1. Use a new order for each scenario.
 3. **Contaminated fuel.** New order 3, accept, fund. Submit 500200 and 500000. Lab: `submitLabResult(3, false, ...)`. A dispute opens (QUALITY_FAIL).
 4. **Outsider.** New order 4, accept, fund. Switch to the 9th account and call `submitMeterReading(4, 500200, ...)`. It reverts with `NotAuthorized`.
 5. **Resolution.** Arbiter: `resolve(1, 7000)` on dispute 1 (the first dispute, from scenario 2). Supplier gets 70% of the held amount and the bank gets 30%.
+
+The `...BySig` functions need an EIP-712 signature from the oracle's key. Remix has no simple way to make one, so produce it with a script or with MetaMask (the UI's **Sign only** button). The direct functions above work as before.
 
 ## Submission bundle
 

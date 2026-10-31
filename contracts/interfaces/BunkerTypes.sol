@@ -108,3 +108,4 @@ error RetentionWindowOpen(uint256 id, uint256 releasableAt);
 error InsufficientEscrow(uint256 id, uint256 requested, uint256 available);
 error OnlyModule(address caller);
 error AlreadyWired();
+error SignatureExpired(uint256 deadline);

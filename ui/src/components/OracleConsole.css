@@ -37,3 +37,16 @@
   padding: 0;
   margin-bottom: 0.3rem;
 }
+.oc-signed {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line, #d9d9d9);
+}
+.oc-signed-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}

@@ -149,6 +149,13 @@ export function headline(g: TxGroup, nameOf: NameOf): string {
   const ev = (n: string) => g.events.find((e) => e.name === n);
   const id = g.orderId;
   const ord = id !== undefined ? ` order ${id}` : " an order";
+  /** "<relayer> relayed <signer>'s signed <what> for order N": the signer is the event's oracle/lab. */
+  const relayed = (eventName: string, what: string, signerKey = "oracle") => {
+    const signer = ev(eventName)?.args[signerKey];
+    return signer
+      ? `${who} relayed ${nameOf(String(signer))}'s signed ${what} for${ord}`
+      : `${who} relayed a signed ${what} for${ord}`;
+  };
   switch (g.fn) {
     case "createOrder":
       return `${who} created${ord}`;
@@ -168,6 +175,12 @@ export function headline(g: TxGroup, nameOf: NameOf): string {
       return `${who} filed the e-BDN for${ord}`;
     case "submitLabResult":
       return `${who} filed the lab result for${ord}`;
+    case "submitMeterReadingBySig":
+      return relayed("MeterReadingSubmitted", "meter reading");
+    case "submitEBDNBySig":
+      return relayed("EBDNSubmitted", "e-BDN");
+    case "submitLabResultBySig":
+      return relayed("LabResultSubmitted", "lab result", "lab");
     case "openDispute":
       return `${who} opened a dispute on${ord}`;
     case "submitEvidence":

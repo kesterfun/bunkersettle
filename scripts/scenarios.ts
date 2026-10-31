@@ -48,6 +48,32 @@ const roleHash = (name: string) => h(name);
 const tonnes = (t: number) => BigInt(Math.round(t * 1000));
 const sgd = (n: number) => ethers.parseEther(String(n));
 
+/** EIP-712 types for the signed oracle submissions (must match DeliveryRecord and QualityRecord). */
+const METER_TYPES = {
+  MeterReading: [
+    { name: "id", type: "uint256" },
+    { name: "qtyKg", type: "uint256" },
+    { name: "ticketHash", type: "bytes32" },
+    { name: "deadline", type: "uint256" },
+  ],
+};
+const EBDN_TYPES = {
+  EBDN: [
+    { name: "id", type: "uint256" },
+    { name: "qtyKg", type: "uint256" },
+    { name: "ebdnHash", type: "bytes32" },
+    { name: "deadline", type: "uint256" },
+  ],
+};
+const LAB_TYPES = {
+  LabResult: [
+    { name: "id", type: "uint256" },
+    { name: "passed", type: "bool" },
+    { name: "reportHash", type: "bytes32" },
+    { name: "deadline", type: "uint256" },
+  ],
+};
+
 /** Formats an 18-decimal mSGD amount with thousands separators and 2 decimals, rounding half up. */
 function fmt(value: bigint): string {
   const cents = (value + 5n * 10n ** 15n) / 10n ** 16n;
@@ -124,6 +150,20 @@ async function main() {
   }
 
   const now = async () => (await ethers.provider.getBlock("latest"))!.timestamp;
+
+  /** Short label for an address: "#n" for the demo accounts, the address otherwise. */
+  const acct = (address: string) => {
+    const i = [admin, bank, buyer, supplier, meterOracle, ebdnOracle, lab, arbiter, outsider].findIndex(
+      (s) => s.address === address,
+    );
+    return i >= 0 ? `#${i}` : address;
+  };
+
+  /** EIP-712 domain of a SignedRoleGuard contract, read from its EIP-5267 eip712Domain(). */
+  async function signingDomain(contract: DeliveryRecord | QualityRecord) {
+    const d = await contract.eip712Domain();
+    return { name: d.name, version: d.version, chainId: d.chainId, verifyingContract: d.verifyingContract };
+  }
 
   /** Prints one compact line and checks the order status against the expected one. */
   async function snapshot(label: string, id: bigint, expected: string) {
@@ -270,6 +310,116 @@ async function main() {
       const disputeId = (await order.getOrder(id)).disputeId;
       await (await dispute.connect(arbiter).resolve(disputeId, SHARE_SUPPLIER_BPS)).wait();
       await snapshot(label, id, "Resolved");
+    }
+  });
+
+  await runScenario("Scenario 6: signed oracle submissions (EIP-712)", async () => {
+    const bank0 = await token.balanceOf(bank.address);
+    const supplier0 = await token.balanceOf(supplier.address);
+    const id = await createOrder("S6", ANCHORAGE.EASTERN_PETROLEUM_B);
+    summary.push({ scenario: "6 Signed (EIP-712)", orderId: id });
+    await acceptAndFund("S6", id);
+
+    // The oracles sign off-chain; the unregistered outsider (#8) relays. The contract checks the signer's role.
+    const deliveryDomain = await signingDomain(delivery);
+    const qualityDomain = await signingDomain(quality);
+    const deadline = (await now()) + 900;
+    const meterQty = tonnes(500.2);
+    const meterTicket = h("BMT-006");
+
+    // Failing relay: #8 signs a meter reading itself. The recovered signer lacks METER_ORACLE.
+    const badSig = await outsider.signTypedData(deliveryDomain, METER_TYPES, {
+      id,
+      qtyKg: meterQty,
+      ticketHash: meterTicket,
+      deadline,
+    });
+    try {
+      await (
+        await delivery.connect(outsider).submitMeterReadingBySig(id, meterQty, meterTicket, deadline, badSig)
+      ).wait();
+      const msg = `S6: non-oracle signature was accepted`;
+      failures.push(msg);
+      console.log(`  UNEXPECTED: ${msg}`);
+    } catch (err) {
+      const decoded = decodeRevert(err, deliveryIface);
+      if (decoded?.name === "NotAuthorized") {
+        const [role, account] = decoded.args as [string, string];
+        const roleName = ROLE_NAMES.find((r) => roleHash(r) === role) ?? role;
+        console.log(`  #8 signs meter as #8, relays -> NotAuthorized(${roleName}, ${account})`);
+      } else {
+        const msg = `S6: expected NotAuthorized, got ${decoded?.name ?? (err as Error).message}`;
+        failures.push(msg);
+        console.log(`  UNEXPECTED: ${msg}`);
+      }
+    }
+    await snapshot("S6: after bad signature", id, "Funded");
+
+    // Happy path: each oracle signs its payload, #8 relays it.
+    const meterSig = await meterOracle.signTypedData(deliveryDomain, METER_TYPES, {
+      id,
+      qtyKg: meterQty,
+      ticketHash: meterTicket,
+      deadline,
+    });
+    await (
+      await delivery.connect(outsider).submitMeterReadingBySig(id, meterQty, meterTicket, deadline, meterSig)
+    ).wait();
+    await snapshot("S6: meter 500.2 t (#4 signed)", id, "Funded");
+
+    const ebdnQty = tonnes(500);
+    const ebdnHash = h("BDN-006");
+    const ebdnSig = await ebdnOracle.signTypedData(deliveryDomain, EBDN_TYPES, {
+      id,
+      qtyKg: ebdnQty,
+      ebdnHash,
+      deadline,
+    });
+    await (await delivery.connect(outsider).submitEBDNBySig(id, ebdnQty, ebdnHash, deadline, ebdnSig)).wait();
+    await snapshot("S6: eBDN 500.0 t (#5 signed)", id, "QuantityApproved");
+
+    const labHash = h("QTR-006");
+    const labSig = await lab.signTypedData(qualityDomain, LAB_TYPES, {
+      id,
+      passed: true,
+      reportHash: labHash,
+      deadline,
+    });
+    await (await quality.connect(outsider).submitLabResultBySig(id, true, labHash, deadline, labSig)).wait();
+    await snapshot("S6: lab pass (#6 signed)", id, "Settled");
+
+    // The events record the recovered signer, not the relayer.
+    const checks: [string, string, string, string][] = [];
+    const meterLogs = await delivery.queryFilter(delivery.filters.MeterReadingSubmitted(id));
+    const ebdnLogs = await delivery.queryFilter(delivery.filters.EBDNSubmitted(id));
+    const labLogs = await quality.queryFilter(quality.filters.LabResultSubmitted(id));
+    checks.push(["meter", "oracle", acct(meterLogs[meterLogs.length - 1]?.args.oracle ?? ""), acct(meterOracle.address)]);
+    checks.push(["e-BDN", "oracle", acct(ebdnLogs[ebdnLogs.length - 1]?.args.oracle ?? ""), acct(ebdnOracle.address)]);
+    checks.push(["lab", "lab", acct(labLogs[labLogs.length - 1]?.args.lab ?? ""), acct(lab.address)]);
+    for (const [what, field, recorded, expected] of checks) {
+      console.log(`  S6: ${what.padEnd(8)} event ${field} ${recorded}`);
+      if (recorded !== expected) {
+        const msg = `S6: ${what} event ${field} expected ${expected}, got ${recorded}`;
+        failures.push(msg);
+        console.log(`    UNEXPECTED: ${msg}`);
+      }
+    }
+
+    // Same order terms and same quantities as scenario 1, so the payouts must match scenario 1's.
+    const s1 = summary.find((r) => r.scenario === "1 Normal");
+    if (s1) {
+      const paid = (await order.getOrder(s1.orderId)).releasedAmount;
+      const bankDelta = bank0 - (await token.balanceOf(bank.address));
+      const supplierDelta = (await token.balanceOf(supplier.address)) - supplier0;
+      const matches = bankDelta === paid && supplierDelta === paid;
+      console.log(
+        `  S6 payout ${fmt(supplierDelta)} to supplier, ${fmt(bankDelta)} from bank; S1 paid ${fmt(paid)} -> ${matches ? "match" : "MISMATCH"}`,
+      );
+      if (!matches) {
+        const msg = `S6: payout does not match scenario 1 (${fmt(paid)})`;
+        failures.push(msg);
+        console.log(`    UNEXPECTED: ${msg}`);
+      }
     }
   });
 

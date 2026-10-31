@@ -95,6 +95,11 @@ export interface ChainState {
    * decoded custom error. Never pre-validates. Resolves true when the tx was mined.
    */
   send(label: string, build: (c: Contracts) => Promise<ethers.ContractTransactionResponse>): Promise<boolean>;
+  /**
+   * Asks the connected MetaMask account to sign (no transaction, no gas), e.g. an EIP-712 message.
+   * Shows a toast that ends in "signed" or in the error. Resolves null when signing failed.
+   */
+  sign<T>(label: string, run: (signer: ethers.Signer) => Promise<T>): Promise<T | null>;
   /** chainId 31337 only. */
   isDevChain: boolean;
   /** evm_increaseTime + evm_mine. */
@@ -519,6 +524,26 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     [read, refresh, upsertToast, dismissToast],
   );
 
+  const sign = useCallback<ChainState["sign"]>(
+    async (label, run) => {
+      const id = ++toastId.current;
+      upsertToast({ id, kind: "pending", title: label, detail: "Sign in MetaMask (no gas)…" });
+      try {
+        if (!window.ethereum) throw new Error("MetaMask is not installed.");
+        if (!accountRef.current) throw new Error("Connect MetaMask first.");
+        const browser = new ethers.BrowserProvider(window.ethereum);
+        const result = await run(await browser.getSigner(accountRef.current));
+        upsertToast({ id, kind: "success", title: label, detail: "Signed. Nothing was sent to the chain." });
+        setTimeout(() => dismissToast(id), 6000);
+        return result;
+      } catch (err) {
+        upsertToast({ id, kind: "error", title: label, error: decodeError(err) });
+        return null;
+      }
+    },
+    [upsertToast, dismissToast],
+  );
+
   const isDevChain = EXPECTED_CHAIN_ID === 31337;
   const fastForward = useCallback(
     async (seconds: number) => {
@@ -585,6 +610,7 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     nameOf,
     read,
     send,
+    sign,
     isDevChain,
     fastForward,
     view,

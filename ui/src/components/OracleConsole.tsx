@@ -1,14 +1,82 @@
 import { useState } from "react";
-import { useChain } from "../chain/ChainContext";
+import type { ethers } from "ethers";
+import { useChain, useChainNow } from "../chain/ChainContext";
 import { fmtTonnes, hashText, shortHex } from "../domain";
 import { StatusChip } from "./ui";
 import "./OracleConsole.css";
 
 const kg = (t: string) => BigInt(Math.round((Number(t) || 0) * 1000));
 
+/** How long a signature stays valid, in chain seconds. */
+const SIGNATURE_TTL = 900;
+
+type Kind = "meter" | "ebdn" | "lab";
+
+/** An oracle's EIP-712 signature waiting for any account to relay it. Numbers are strings so it can be saved. */
+interface Signed {
+  kind: Kind;
+  id: number;
+  /** Quantity in kg (meter, e-BDN) or "1" / "0" for pass / fail (lab). */
+  value: string;
+  hash: string;
+  deadline: number;
+  signer: string;
+  signature: string;
+}
+
+const KIND_LABEL: Record<Kind, string> = { meter: "Meter reading", ebdn: "e-BDN", lab: "Lab result" };
+
+/** EIP-712 field lists; they must match the TYPEHASH strings in DeliveryRecord and QualityRecord. */
+const TYPES: Record<Kind, { primary: string; fields: { name: string; type: string }[] }> = {
+  meter: {
+    primary: "MeterReading",
+    fields: [
+      { name: "id", type: "uint256" },
+      { name: "qtyKg", type: "uint256" },
+      { name: "ticketHash", type: "bytes32" },
+      { name: "deadline", type: "uint256" },
+    ],
+  },
+  ebdn: {
+    primary: "EBDN",
+    fields: [
+      { name: "id", type: "uint256" },
+      { name: "qtyKg", type: "uint256" },
+      { name: "ebdnHash", type: "bytes32" },
+      { name: "deadline", type: "uint256" },
+    ],
+  },
+  lab: {
+    primary: "LabResult",
+    fields: [
+      { name: "id", type: "uint256" },
+      { name: "passed", type: "bool" },
+      { name: "reportHash", type: "bytes32" },
+      { name: "deadline", type: "uint256" },
+    ],
+  },
+};
+
+const STORE_KEY = "bunkersettle.signed";
+const loadSigned = (): Signed[] => {
+  try {
+    return JSON.parse(sessionStorage.getItem(STORE_KEY) ?? "[]") as Signed[];
+  } catch {
+    return [];
+  }
+};
+const saveSigned = (v: Signed[]) => {
+  try {
+    sessionStorage.setItem(STORE_KEY, JSON.stringify(v));
+  } catch {
+    /* storage unavailable: the list just will not survive a reload */
+  }
+};
+
 /** Demo-only stand-in for the meter logger, the e-BDN system and the lab. */
 export function OracleConsole() {
-  const { orders, orderId, send, uiChecks } = useChain();
+  const { orders, orderId, send, sign, read, nameOf, uiChecks } = useChain();
+  const chainNow = useChainNow();
   const fallback = [...orders].reverse().find((o) => o.status === "Funded")?.id ?? orders[orders.length - 1]?.id ?? 0;
   const [sel, setSel] = useState<number | null>(null);
   const id = sel ?? orderId ?? fallback;
@@ -28,6 +96,41 @@ export function OracleConsole() {
     setEText(`BDN: ${e} t VLSFO`);
     setPass(lab);
     setLText(lab ? "Lab report: ISO 8217 pass" : "Lab report: ISO 8217 FAIL (sulphur above limit)");
+  };
+
+  const [signed, setSignedState] = useState<Signed[]>(loadSigned);
+  const setSigned = (v: Signed[]) => {
+    setSignedState(v);
+    saveSigned(v);
+  };
+
+  /** Oracle signs the typed message in MetaMask. No transaction, no gas. */
+  const signKind = async (kind: Kind, value: bigint, hash: string) => {
+    const contract = kind === "lab" ? read.QualityRecord : read.DeliveryRecord;
+    const deadline = chainNow + SIGNATURE_TTL;
+    const item = await sign(`Sign ${KIND_LABEL[kind].toLowerCase()}`, async (signer: ethers.Signer) => {
+      const d = await contract.eip712Domain();
+      const domain = { name: d.name, version: d.version, chainId: d.chainId, verifyingContract: d.verifyingContract };
+      const t = TYPES[kind];
+      const message: Record<string, unknown> = {
+        [t.fields[0].name]: id,
+        [t.fields[1].name]: kind === "lab" ? value === 1n : value,
+        [t.fields[2].name]: hash,
+        deadline,
+      };
+      const signature = await signer.signTypedData(domain, { [t.primary]: t.fields }, message);
+      return { kind, id, value: value.toString(), hash, deadline, signer: await signer.getAddress(), signature } as Signed;
+    });
+    if (item) setSigned([...signed, item]);
+  };
+
+  const relay = async (it: Signed) => {
+    const ok = await send(`Relay signed ${KIND_LABEL[it.kind].toLowerCase()}`, (c) => {
+      if (it.kind === "meter") return c.DeliveryRecord.submitMeterReadingBySig(it.id, BigInt(it.value), it.hash, it.deadline, it.signature);
+      if (it.kind === "ebdn") return c.DeliveryRecord.submitEBDNBySig(it.id, BigInt(it.value), it.hash, it.deadline, it.signature);
+      return c.QualityRecord.submitLabResultBySig(it.id, it.value === "1", it.hash, it.deadline, it.signature);
+    });
+    if (ok) setSigned(signed.filter((x) => x !== it));
   };
 
   const notFunded = uiChecks && order && order.status !== "Funded" ? "Order must be Funded." : "";
@@ -109,6 +212,13 @@ export function OracleConsole() {
             >
               Submit meter reading
             </button>
+            <button
+              id="oc-meter-sign"
+              className="btn btn-ghost"
+              onClick={() => signKind("meter", kg(mT), hashText(mText))}
+            >
+              Sign only (no gas)
+            </button>
             {notFunded && <small className="oc-hint">{notFunded}</small>}
           </div>
         </section>
@@ -135,6 +245,13 @@ export function OracleConsole() {
               onClick={() => send("Submit e-BDN", (c) => c.DeliveryRecord.submitEBDN(id, kg(eT), hashText(eText)))}
             >
               Submit e-BDN
+            </button>
+            <button
+              id="oc-ebdn-sign"
+              className="btn btn-ghost"
+              onClick={() => signKind("ebdn", kg(eT), hashText(eText))}
+            >
+              Sign only (no gas)
             </button>
             {notFunded && <small className="oc-hint">{notFunded}</small>}
           </div>
@@ -168,10 +285,55 @@ export function OracleConsole() {
             >
               Submit lab result
             </button>
+            <button
+              id="oc-lab-sign"
+              className="btn btn-ghost"
+              onClick={() => signKind("lab", pass ? 1n : 0n, hashText(lText))}
+            >
+              Sign only (no gas)
+            </button>
             {notApproved && <small className="oc-hint">{notApproved}</small>}
           </div>
         </section>
       </div>
+
+      <section className="panel">
+        <div className="panel-head">
+          <span className="label">Signed submissions (EIP-712)</span>
+          <span className="label">{signed.length} waiting</span>
+        </div>
+        <div className="panel-body">
+          <small className="oc-hint">
+            An oracle signs without paying gas, then any account relays the signature. The contract records the
+            signer, not the relayer, and rejects it if the signer lacks the role. Sign as #4 / #5 / #6, use
+            Change account to switch to #8 (no role), then press Relay.
+          </small>
+          {signed.length === 0 && <small className="oc-hint">Nothing signed yet.</small>}
+          {signed.map((it) => (
+            <div key={`${it.kind}-${it.id}-${it.signature}`} className="oc-signed">
+              <div>
+                <strong>
+                  {KIND_LABEL[it.kind]} for order #{it.id}
+                </strong>{" "}
+                signed by {nameOf(it.signer)}
+                <small className="oc-hint">
+                  {" "}
+                  {chainNow > it.deadline ? "expired" : `expires in ${it.deadline - chainNow} s`}
+                </small>
+                <small className="mono oc-hash">{it.signature}</small>
+              </div>
+              <div className="oc-signed-actions">
+                <button className="btn btn-sm" onClick={() => relay(it)}>
+                  Relay
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setSigned(signed.filter((x) => x !== it))}>
+                  Discard
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </>
   );
 }

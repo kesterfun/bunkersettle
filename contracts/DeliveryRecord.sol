@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {RoleGuard} from "./base/RoleGuard.sol";
+import {SignedRoleGuard} from "./base/SignedRoleGuard.sol";
 import {IBunkerOrder} from "./interfaces/IBunkerOrder.sol";
 import {IDeliveryRecord} from "./interfaces/IDeliveryRecord.sol";
 import {
@@ -17,7 +17,7 @@ import {
 
 /// @title DeliveryRecord
 /// @notice Stores meter (BMT) and e-BDN (BDN) evidence and compares them.
-contract DeliveryRecord is IDeliveryRecord, RoleGuard {
+contract DeliveryRecord is IDeliveryRecord, SignedRoleGuard {
     struct Delivery {
         uint256 meterKg;
         uint256 ebdnKg;
@@ -26,6 +26,11 @@ contract DeliveryRecord is IDeliveryRecord, RoleGuard {
         bool meterSubmitted;
         bool ebdnSubmitted;
     }
+
+    bytes32 public constant METER_TYPEHASH =
+        keccak256("MeterReading(uint256 id,uint256 qtyKg,bytes32 ticketHash,uint256 deadline)");
+    bytes32 public constant EBDN_TYPEHASH =
+        keccak256("EBDN(uint256 id,uint256 qtyKg,bytes32 ebdnHash,uint256 deadline)");
 
     IBunkerOrder public immutable order;
 
@@ -38,7 +43,7 @@ contract DeliveryRecord is IDeliveryRecord, RoleGuard {
     event DeliveryVerified(uint256 indexed id, uint256 deliveredKg);
     event QuantityMismatch(uint256 indexed id, uint256 meterKg, uint256 ebdnKg);
 
-    constructor(address registry_, address order_) RoleGuard(registry_) {
+    constructor(address registry_, address order_) SignedRoleGuard(registry_, "BunkerSettle DeliveryRecord") {
         if (order_ == address(0)) revert InvalidParameter("order");
         order = IBunkerOrder(order_);
     }
@@ -49,6 +54,30 @@ contract DeliveryRecord is IDeliveryRecord, RoleGuard {
     /// @param ticketHash Hash of the bunker metering ticket (BMT).
     function submitMeterReading(uint256 id, uint256 qtyKg, bytes32 ticketHash) external {
         _requireRole(ROLE_METER_ORACLE, msg.sender);
+        _submitMeter(id, qtyKg, ticketHash, msg.sender);
+    }
+
+    /// @notice Same as `submitMeterReading`, but sent by any relayer with the METER_ORACLE's EIP-712
+    ///         signature. The recovered signer must hold the role and is recorded as the oracle.
+    /// @param id Order id.
+    /// @param qtyKg Metered quantity in kilograms.
+    /// @param ticketHash Hash of the bunker metering ticket (BMT).
+    /// @param deadline Unix time after which the signature is rejected.
+    /// @param signature EIP-712 `MeterReading` signature by the oracle.
+    function submitMeterReadingBySig(
+        uint256 id,
+        uint256 qtyKg,
+        bytes32 ticketHash,
+        uint256 deadline,
+        bytes calldata signature
+    ) external {
+        address signer = _verifySigned(
+            ROLE_METER_ORACLE, keccak256(abi.encode(METER_TYPEHASH, id, qtyKg, ticketHash, deadline)), deadline, signature
+        );
+        _submitMeter(id, qtyKg, ticketHash, signer);
+    }
+
+    function _submitMeter(uint256 id, uint256 qtyKg, bytes32 ticketHash, address oracle) private {
         Order memory o = order.getOrder(id);
         Delivery storage d = _deliveries[id];
         if (d.meterSubmitted) revert AlreadySubmitted(id, "meter");
@@ -57,7 +86,7 @@ contract DeliveryRecord is IDeliveryRecord, RoleGuard {
         d.meterKg = qtyKg;
         d.ticketHash = ticketHash;
         d.meterSubmitted = true;
-        emit MeterReadingSubmitted(id, qtyKg, ticketHash, DocType.BMT, msg.sender);
+        emit MeterReadingSubmitted(id, qtyKg, ticketHash, DocType.BMT, oracle);
         if (d.ebdnSubmitted) _compare(id, d, o.toleranceBps);
     }
 
@@ -67,6 +96,26 @@ contract DeliveryRecord is IDeliveryRecord, RoleGuard {
     /// @param ebdnHash Hash of the bunker delivery note (BDN).
     function submitEBDN(uint256 id, uint256 qtyKg, bytes32 ebdnHash) external {
         _requireRole(ROLE_EBDN_ORACLE, msg.sender);
+        _submitEBDN(id, qtyKg, ebdnHash, msg.sender);
+    }
+
+    /// @notice Same as `submitEBDN`, but sent by any relayer with the EBDN_ORACLE's EIP-712 signature.
+    ///         The recovered signer must hold the role and is recorded as the oracle.
+    /// @param id Order id.
+    /// @param qtyKg Quantity on the delivery note in kilograms.
+    /// @param ebdnHash Hash of the bunker delivery note (BDN).
+    /// @param deadline Unix time after which the signature is rejected.
+    /// @param signature EIP-712 `EBDN` signature by the oracle.
+    function submitEBDNBySig(uint256 id, uint256 qtyKg, bytes32 ebdnHash, uint256 deadline, bytes calldata signature)
+        external
+    {
+        address signer = _verifySigned(
+            ROLE_EBDN_ORACLE, keccak256(abi.encode(EBDN_TYPEHASH, id, qtyKg, ebdnHash, deadline)), deadline, signature
+        );
+        _submitEBDN(id, qtyKg, ebdnHash, signer);
+    }
+
+    function _submitEBDN(uint256 id, uint256 qtyKg, bytes32 ebdnHash, address oracle) private {
         Order memory o = order.getOrder(id);
         Delivery storage d = _deliveries[id];
         if (d.ebdnSubmitted) revert AlreadySubmitted(id, "ebdn");
@@ -75,7 +124,7 @@ contract DeliveryRecord is IDeliveryRecord, RoleGuard {
         d.ebdnKg = qtyKg;
         d.ebdnHash = ebdnHash;
         d.ebdnSubmitted = true;
-        emit EBDNSubmitted(id, qtyKg, ebdnHash, DocType.BDN, msg.sender);
+        emit EBDNSubmitted(id, qtyKg, ebdnHash, DocType.BDN, oracle);
         if (d.meterSubmitted) _compare(id, d, o.toleranceBps);
     }
 
