@@ -37,8 +37,8 @@ The UI needs `npm run deploy` to have run first. It imports `ui/src/deployments.
 | Command | What it does |
 |---|---|
 | `npm run compile` | Compiles the contracts (`hardhat compile`). |
-| `npm test` | Runs the Hardhat test suite (196 tests). |
-| `npm run coverage` | Runs solidity-coverage (99.3% lines). Report goes to `coverage/`. |
+| `npm test` | Runs the Hardhat test suite (247 tests). |
+| `npm run coverage` | Runs solidity-coverage (99.4% lines). Report goes to `coverage/`. |
 | `npm run gas` | Runs the tests with the gas reporter on. |
 | `npm run node` | Starts the local chain. |
 | `npm run deploy` | Deploys, wires and seeds (see above). |
@@ -117,7 +117,7 @@ The meter oracle, e-BDN provider and lab can sign their submission off-chain ins
 
 To try it in the UI (Oracle console):
 
-1. As #4, open Oracle console, pick a funded order, fill in the meter reading and press **Sign only (no gas)**. MetaMask asks for a signature, not a transaction.
+1. Create, accept and fund an order first, as in scenario 1 below. Then, as #4, open Oracle console, pick the funded order, fill in the meter reading and press **Sign only (no gas)**. MetaMask asks for a signature, not a transaction.
 2. Repeat as #5 for the e-BDN and as #6 for the lab result. Each signed item appears under **Signed submissions (EIP-712)**.
 3. Click **Change account** and switch to #8 (unregistered).
 4. In **Signed submissions (EIP-712)**, press **Relay** for each item. Each relay is a normal transaction from #8. The event shows #4, #5 or #6 as the signer.
