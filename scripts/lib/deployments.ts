@@ -9,8 +9,22 @@ export interface DeployedContract {
   abi: unknown[];
 }
 
+/** One Besu validator as the UI should poll it. */
+export interface BesuNode {
+  name: string;
+  rpcUrl: string;
+  /** Validator (block signer) address, matches the block miner field. */
+  validator: string;
+}
+
 export interface Deployments {
   chainId: number;
+  /** Hardhat network name the contracts were deployed through (hardhat, localhost, besu). */
+  networkName: string;
+  /** JSON-RPC URL of that network. */
+  rpcUrl: string;
+  /** Per-validator RPC endpoints; only present on the besu network. */
+  besuNodes?: BesuNode[];
   deployedAt: string;
   deployer: string;
   contracts: Record<string, DeployedContract>;

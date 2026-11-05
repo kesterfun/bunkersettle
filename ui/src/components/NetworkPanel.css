@@ -1,0 +1,78 @@
+.net {
+  margin-bottom: 1.25rem;
+}
+.net-title {
+  font: 900 1.15rem var(--f-display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.net-status {
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.5rem;
+  color: #ffffff;
+}
+.net-ok {
+  background: var(--green);
+}
+.net-halt {
+  background: var(--red);
+}
+.net-stats {
+  font-size: 0.82rem;
+  color: var(--grey);
+}
+.net-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+}
+.net-card {
+  padding: 0.6rem 0.8rem;
+  border-right: 2px solid var(--ink);
+  background: var(--bg);
+}
+.net-card:last-child {
+  border-right: none;
+}
+.net-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.net-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--green);
+  margin-left: auto;
+}
+.net-line {
+  font-size: 0.78rem;
+  color: var(--grey);
+}
+.net-url {
+  font-size: 0.72rem;
+}
+.net-prop {
+  background: var(--pale);
+  box-shadow: inset 0 4px 0 var(--yellow);
+}
+.net-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.net-off {
+  background: var(--soft);
+  color: var(--grey);
+  box-shadow: inset 0 4px 0 var(--red);
+}
+.net-off b {
+  text-decoration: line-through;
+}
+.net-off .net-dot {
+  background: var(--red);
+}

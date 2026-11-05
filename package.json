@@ -11,6 +11,12 @@
     "node": "hardhat node",
     "deploy": "hardhat run scripts/deploy.ts --network localhost && hardhat run scripts/seed.ts --network localhost",
     "scenarios": "hardhat run scripts/scenarios.ts --network localhost",
+    "besu:up": "docker compose -f besu/docker-compose.yml up -d",
+    "besu:down": "docker compose -f besu/docker-compose.yml down",
+    "besu:reset": "docker compose -f besu/docker-compose.yml down -v",
+    "besu:logs": "docker compose -f besu/docker-compose.yml logs -f --tail=50",
+    "deploy:besu": "hardhat run scripts/deploy.ts --network besu && hardhat run scripts/seed.ts --network besu",
+    "scenarios:besu": "hardhat run scripts/scenarios.ts --network besu",
     "ui": "cd ui && npm run dev",
     "submission": "hardhat run scripts/export-submission.ts",
     "fetch-sales": "ts-node scripts/fetch-sales.ts"

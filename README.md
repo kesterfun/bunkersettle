@@ -44,6 +44,8 @@ The UI needs `npm run deploy` to have run first. It imports `ui/src/deployments.
 | `npm run deploy` | Deploys, wires and seeds (see above). |
 | `npm run scenarios` | Runs the six demo scenarios headless (1 to 6). |
 | `npm run ui` | Starts the Vite dev server. |
+| `npm run besu:up` / `besu:down` / `besu:reset` / `besu:logs` | Start, stop, wipe and follow the local Besu QBFT network (see Running on Besu QBFT). |
+| `npm run deploy:besu` / `scenarios:besu` | Deploy and seed on Besu; run the scenarios on Besu. |
 | `npm run fetch-sales` | Refreshes `ui/public/bunker-sales.json` from data.gov.sg (the fallback for the Market view). |
 | `npm run submission` | Builds the submission bundle in `submission/` (see below). |
 
@@ -65,6 +67,44 @@ The UI needs `npm run deploy` to have run first. It imports `ui/src/deployments.
 These are Hardhat's public test keys. Anyone can read them. Never use them, or send funds to them, on a real network.
 
 After you restart the node, clear each account's activity in MetaMask (Settings, Advanced, Clear activity tab data). Otherwise MetaMask reuses stale nonces and transactions fail.
+
+## Running on Besu QBFT
+
+The same contracts, scripts and UI also run on a local 4-validator Hyperledger Besu network (QBFT consensus, 2-second blocks, chain ID 4520). The UI shows a Besu badge in the header and a Network panel on the Harbour view with the four validators.
+
+Prerequisite: Docker Desktop running. Besu uses port 8550 and Hardhat 8545, so both can run at once, but `ui/src/deployments.json` points at only one of them.
+
+| Step | Command | What it does |
+|---|---|---|
+| 1 | `npm run besu:up` | Starts 4 validator containers (`bunkersettle-validator1` to `4`, image `hyperledger/besu:26.10.2`). Wait about 20 seconds for them to peer. |
+| 2 | `npm run deploy:besu` | Deploys, wires and seeds on Besu and writes `ui/src/deployments.json` for Besu. `npm run deploy` rewrites it for Hardhat. |
+| 3 (optional) | `npm run scenarios:besu` | Runs scenarios 1 to 6 headless against Besu. |
+| 4 | `npm run ui` | Starts the UI at http://localhost:5173. |
+
+Other commands: `npm run besu:logs` (follow logs), `npm run besu:down` (stop, keep the chain), `npm run besu:reset` (stop and wipe all chain state; then run `besu:up` and `deploy:besu` again and clear MetaMask activity data).
+
+JSON-RPC on the host: validator 1 on 8550 (the main endpoint), validators 2 to 4 on 8551 to 8553. Config, genesis and the dev-only keys are in `besu/` (see `besu/README.md`). Hardhat accounts #0 to #19 are prefunded, so the accounts and keys are the same as on Hardhat.
+
+MetaMask network for Besu:
+
+| Field | Value |
+|---|---|
+| Network name | Besu QBFT |
+| RPC URL | `http://127.0.0.1:8550` |
+| Chain ID | 4520 |
+| Currency symbol | ETH |
+
+Gas price is zero on this network. The Fast-forward buttons are hidden because a real chain cannot be time-travelled.
+
+### Fault tolerance demo
+
+QBFT with 4 validators needs 3 of 4 to agree: it survives 1 failed validator and halts at 2. With the UI open on the Harbour view:
+
+1. `docker stop bunkersettle-validator4`. Card 4 turns red; blocks keep coming and transactions still confirm.
+2. `docker stop bunkersettle-validator3`. Only 2 of 4 are left: the panel shows "Halted — needs 3 of 4 validators" within a few seconds and new transactions stay pending.
+3. `docker start bunkersettle-validator3 bunkersettle-validator4`. The validators rejoin and blocks resume. QBFT backs off its round timer while halted, so allow up to about 2 minutes for the first new block.
+
+Do not stop `bunkersettle-validator1` for the demo: the UI and MetaMask read through it (port 8550).
 
 ## Accounts and roles
 
@@ -296,6 +336,7 @@ scripts/
   lib/          deployments helper
 test/           Hardhat tests (TypeScript) and helpers/fixtures.ts
 ui/             Vite + React + TypeScript app (ethers v6)
+besu/           Docker Compose, genesis and dev keys for the Besu QBFT network
 docs/DECISIONS.md   design choices not covered by the spec
 SPEC.md         source of truth
 ```

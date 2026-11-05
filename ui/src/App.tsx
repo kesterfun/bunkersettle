@@ -8,6 +8,7 @@ import { OrderScreen } from "./components/OrderScreen";
 import { CreateOrderForm } from "./components/CreateOrderForm";
 import { OracleConsole } from "./components/OracleConsole";
 import { DisputesView } from "./components/DisputesView";
+import { NetworkPanel } from "./components/NetworkPanel";
 import { MarketPanel } from "./components/MarketPanel";
 
 export function App() {
@@ -16,7 +17,7 @@ export function App() {
     <>
       <Header />
       <main className="app-main">
-        {view === "harbour" && <HarbourView />}
+        {view === "harbour" && (<><NetworkPanel /><HarbourView /></>)}
         {view === "order" && <OrderScreen />}
         {view === "create" && <CreateOrderForm />}
         {view === "oracle" && <OracleConsole />}

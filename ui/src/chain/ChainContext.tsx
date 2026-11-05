@@ -28,8 +28,29 @@ declare global {
   }
 }
 
-export const RPC_URL: string = import.meta.env.VITE_RPC_URL ?? "http://127.0.0.1:8545";
+/** Fields written by scripts/deploy.ts; older manifests may lack them. */
+interface ManifestExtras {
+  rpcUrl?: string;
+  networkName?: string;
+  besuNodes?: BesuNode[];
+}
+const manifest = deployments as typeof deployments & ManifestExtras;
+
+/** One Besu validator as listed in the deployment manifest. */
+export interface BesuNode {
+  name: string;
+  rpcUrl: string;
+  /** Validator (block signer) address; equals the block miner field when it proposes. */
+  validator: string;
+}
+
+export const RPC_URL: string = import.meta.env.VITE_RPC_URL ?? manifest.rpcUrl ?? "http://127.0.0.1:8545";
 export const EXPECTED_CHAIN_ID: number = deployments.chainId;
+export const NETWORK_NAME: string = manifest.networkName ?? (EXPECTED_CHAIN_ID === 31337 ? "localhost" : "unknown");
+export const BESU_NODES: BesuNode[] = manifest.besuNodes ?? [];
+/** Name shown to the user and offered to MetaMask for this chain. */
+export const CHAIN_LABEL: string =
+  NETWORK_NAME === "besu" ? "Besu QBFT (BunkerSettle)" : EXPECTED_CHAIN_ID === 31337 ? "Hardhat localhost" : `Chain ${EXPECTED_CHAIN_ID}`;
 
 export type ContractName = keyof typeof deployments.contracts;
 const NAMES = Object.keys(deployments.contracts) as ContractName[];
@@ -100,6 +121,10 @@ export interface ChainState {
    * Shows a toast that ends in "signed" or in the error. Resolves null when signing failed.
    */
   sign<T>(label: string, run: (signer: ethers.Signer) => Promise<T>): Promise<T | null>;
+  /** web3_clientVersion of the RPC node, or null until it answers. */
+  clientVersion: string | null;
+  /** The RPC node reports itself as Hyperledger Besu. */
+  isBesu: boolean;
   /** chainId 31337 only. */
   isDevChain: boolean;
   /** evm_increaseTime + evm_mine. */
@@ -255,7 +280,7 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     } catch {
       await eth.request({
         method: "wallet_addEthereumChain",
-        params: [{ chainId, chainName: "Hardhat localhost", rpcUrls: [RPC_URL], nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 } }],
+        params: [{ chainId, chainName: CHAIN_LABEL, rpcUrls: [RPC_URL], nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 } }],
       });
     }
   }, []);
@@ -272,8 +297,10 @@ export function ChainProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [allowance, setAllowance] = useState(0n);
   const [paused, setPaused] = useState(false);
+  const [clientVersion, setClientVersion] = useState<string | null>(null);
   const [timeOffset, setTimeOffset] = useState<number | null>(null);
 
+  const clientVersionRef = useRef<string | null>(null);
   const eventsRef = useRef<ActivityEvent[]>([]);
   const lastLogBlock = useRef(-1);
   const blockTimes = useRef(new Map<number, number>());
@@ -315,6 +342,14 @@ export function ChainProvider({ children }: { children: ReactNode }) {
       const latest = await provider.getBlock("latest");
       if (!latest) return;
       setRpcOk(true);
+      if (!clientVersionRef.current) {
+        try {
+          clientVersionRef.current = String(await provider.send("web3_clientVersion", []));
+          setClientVersion(clientVersionRef.current);
+        } catch {
+          // client string is cosmetic; retried on the next refresh
+        }
+      }
       // A restarted node starts over at a lower block: drop everything cached.
       if (latest.number < lastLogBlock.current) {
         eventsRef.current = [];
@@ -611,6 +646,8 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     read,
     send,
     sign,
+    clientVersion,
+    isBesu: !!clientVersion && clientVersion.toLowerCase().startsWith("besu"),
     isDevChain,
     fastForward,
     view,

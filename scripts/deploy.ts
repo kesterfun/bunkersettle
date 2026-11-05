@@ -1,4 +1,6 @@
-import { artifacts, ethers } from "hardhat";
+import { artifacts, ethers, network } from "hardhat";
+import * as fs from "fs";
+import * as path from "path";
 import type {
   BunkerOrder,
   DeliveryRecord,
@@ -8,12 +10,26 @@ import type {
   PaymentEscrow,
   QualityRecord,
 } from "../typechain-types";
-import { Deployments, DeployedContract, writeDeployments, DEPLOYMENTS_PATH } from "./lib/deployments";
+import { BesuNode, Deployments, DeployedContract, writeDeployments, DEPLOYMENTS_PATH } from "./lib/deployments";
+
+/** Reads besu/nodes/node{1..4}/key.pub: validator address and the host port 8550+n-1 of its JSON-RPC. */
+function besuNodes(rpcUrl: string): BesuNode[] {
+  const base = new URL(rpcUrl);
+  const nodes: BesuNode[] = [];
+  for (let n = 1; n <= 4; n++) {
+    const pub = fs.readFileSync(path.join(__dirname, "..", "besu", "nodes", `node${n}`, "key.pub"), "utf8").trim();
+    const validator = ethers.getAddress("0x" + ethers.keccak256("0x" + pub.replace(/^0x/, "")).slice(-40));
+    base.port = String(8549 + n);
+    nodes.push({ name: `Validator ${n}`, rpcUrl: base.origin, validator });
+  }
+  return nodes;
+}
 
 /** Deploys all contracts in SPEC 5.8 order, wires them, and writes ui/src/deployments.json. */
 async function main() {
   const [deployer] = await ethers.getSigners();
   const { chainId } = await ethers.provider.getNetwork();
+  const rpcUrl = "url" in network.config ? network.config.url : "http://127.0.0.1:8545";
 
   const registry: ParticipantRegistry = await ethers.deployContract("ParticipantRegistry");
   await registry.waitForDeployment();
@@ -81,6 +97,9 @@ async function main() {
 
   const manifest: Deployments = {
     chainId: Number(chainId),
+    networkName: network.name,
+    rpcUrl,
+    ...(network.name === "besu" ? { besuNodes: besuNodes(rpcUrl) } : {}),
     deployedAt: new Date().toISOString(),
     deployer: deployer.address,
     contracts,

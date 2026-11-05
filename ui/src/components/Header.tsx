@@ -1,4 +1,4 @@
-import { useChain, type View } from "../chain/ChainContext";
+import { useChain, EXPECTED_CHAIN_ID, NETWORK_NAME, type View } from "../chain/ChainContext";
 import { ROLE_LABEL, isBunkering, shortHex } from "../domain";
 import { BravoFlag } from "./ui";
 import "./Header.css";
@@ -36,7 +36,12 @@ export function Header() {
         </div>
 
         <div className="hd-account">
-          {!c.rpcOk && <span className="hd-warn">Local node not reachable. Run npm run node.</span>}
+          {c.isBesu && (
+            <span className="hd-net hd-net-besu" title="Connected to a 4-validator Hyperledger Besu QBFT network">
+              Besu QBFT · chain {EXPECTED_CHAIN_ID} · block {c.blockNumber}
+            </span>
+          )}
+          {!c.rpcOk && <span className="hd-warn">Local node not reachable. Run {NETWORK_NAME === "besu" ? "npm run besu:up" : "npm run node"}.</span>}
           {!c.hasMetaMask ? (
             <span className="hd-warn">Install MetaMask to sign transactions.</span>
           ) : !c.account ? (
@@ -45,7 +50,7 @@ export function Header() {
             </button>
           ) : c.wrongNetwork ? (
             <button className="btn btn-danger" type="button" onClick={() => void c.switchNetwork()}>
-              Wrong network ({c.walletChainId}). Switch to 31337
+              Wrong network ({c.walletChainId}). Switch to {EXPECTED_CHAIN_ID}
             </button>
           ) : (
             <div className="hd-who">
@@ -58,7 +63,7 @@ export function Header() {
               ))}
               {c.me?.suspended && <span className="hd-role hd-suspended">Suspended</span>}
               <span className="hd-addr mono">{shortHex(c.account)}</span>
-              <span className="hd-net">Chain 31337 · block {c.blockNumber}</span>
+              {!c.isBesu && <span className="hd-net">Chain {EXPECTED_CHAIN_ID} · block {c.blockNumber}</span>}
               <button className="btn btn-sm btn-ghost" type="button" onClick={() => void c.changeAccount()}>
                 Change account
               </button>

@@ -1,0 +1,128 @@
+# Dev-only 4-validator Hyperledger Besu QBFT network (chainId 4520). See besu/README.md.
+name: bunkersettle-besu
+
+x-besu: &besu
+  image: hyperledger/besu:26.10.2
+  restart: unless-stopped
+
+services:
+  validator1:
+    <<: *besu
+    container_name: bunkersettle-validator1
+    command: >
+      --genesis-file=/config/genesis.json
+      --node-private-key-file=/config/key
+      --data-path=/data
+      --min-gas-price=0
+      --rpc-http-enabled
+      --rpc-http-host=0.0.0.0
+      --rpc-http-port=8545
+      --rpc-http-api=ETH,NET,WEB3,QBFT,TXPOOL
+      --rpc-http-cors-origins=*
+      --host-allowlist=*
+      --p2p-host=172.28.0.11
+      --p2p-port=30303
+      --bootnodes=enode://5c4ce17da8f6daffa82ab82d2f0944677fc3b4cdb03d38abf031fcc4c3c3c3d1714bd6570d2d24b28319bff7fa82f911e18a3dfadeb2d83f8216404b2cef2a35@172.28.0.12:30303,enode://f832ad63ec5d0c9b28d69bfa071a36756da770b64bacbe232eeb166d68a716017e1b565a36f9f17b7cd3038997912526e2663836fe98f09718b1cabd11745dfe@172.28.0.13:30303,enode://32d969ad8ba77efdfc25734808331b544dca7a0606670fcb755cb40d1141a1a70e6a05562b5582fdf33d1848b4825a84f78258781728ff461cb58efe4aa8a616@172.28.0.14:30303
+    ports:
+      - "8550:8545"
+    volumes:
+      - ./genesis.json:/config/genesis.json:ro
+      - ./nodes/node1/key:/config/key:ro
+      - validator1-data:/data
+    networks:
+      besu:
+        ipv4_address: 172.28.0.11
+
+  validator2:
+    <<: *besu
+    container_name: bunkersettle-validator2
+    command: >
+      --genesis-file=/config/genesis.json
+      --node-private-key-file=/config/key
+      --data-path=/data
+      --min-gas-price=0
+      --rpc-http-enabled
+      --rpc-http-host=0.0.0.0
+      --rpc-http-port=8545
+      --rpc-http-api=ETH,NET,WEB3,QBFT,TXPOOL
+      --rpc-http-cors-origins=*
+      --host-allowlist=*
+      --p2p-host=172.28.0.12
+      --p2p-port=30303
+      --bootnodes=enode://303a80275ccc1d500523cfcb5a7221ddd8eb32855a72928828097c9f45e8a6586f5550b21bfb82f695e045a76a95a9c7900971a84bc8f01fd9af07cb368cec2a@172.28.0.11:30303,enode://f832ad63ec5d0c9b28d69bfa071a36756da770b64bacbe232eeb166d68a716017e1b565a36f9f17b7cd3038997912526e2663836fe98f09718b1cabd11745dfe@172.28.0.13:30303,enode://32d969ad8ba77efdfc25734808331b544dca7a0606670fcb755cb40d1141a1a70e6a05562b5582fdf33d1848b4825a84f78258781728ff461cb58efe4aa8a616@172.28.0.14:30303
+    ports:
+      - "8551:8545"
+    volumes:
+      - ./genesis.json:/config/genesis.json:ro
+      - ./nodes/node2/key:/config/key:ro
+      - validator2-data:/data
+    networks:
+      besu:
+        ipv4_address: 172.28.0.12
+
+  validator3:
+    <<: *besu
+    container_name: bunkersettle-validator3
+    command: >
+      --genesis-file=/config/genesis.json
+      --node-private-key-file=/config/key
+      --data-path=/data
+      --min-gas-price=0
+      --rpc-http-enabled
+      --rpc-http-host=0.0.0.0
+      --rpc-http-port=8545
+      --rpc-http-api=ETH,NET,WEB3,QBFT,TXPOOL
+      --rpc-http-cors-origins=*
+      --host-allowlist=*
+      --p2p-host=172.28.0.13
+      --p2p-port=30303
+      --bootnodes=enode://303a80275ccc1d500523cfcb5a7221ddd8eb32855a72928828097c9f45e8a6586f5550b21bfb82f695e045a76a95a9c7900971a84bc8f01fd9af07cb368cec2a@172.28.0.11:30303,enode://5c4ce17da8f6daffa82ab82d2f0944677fc3b4cdb03d38abf031fcc4c3c3c3d1714bd6570d2d24b28319bff7fa82f911e18a3dfadeb2d83f8216404b2cef2a35@172.28.0.12:30303,enode://32d969ad8ba77efdfc25734808331b544dca7a0606670fcb755cb40d1141a1a70e6a05562b5582fdf33d1848b4825a84f78258781728ff461cb58efe4aa8a616@172.28.0.14:30303
+    ports:
+      - "8552:8545"
+    volumes:
+      - ./genesis.json:/config/genesis.json:ro
+      - ./nodes/node3/key:/config/key:ro
+      - validator3-data:/data
+    networks:
+      besu:
+        ipv4_address: 172.28.0.13
+
+  validator4:
+    <<: *besu
+    container_name: bunkersettle-validator4
+    command: >
+      --genesis-file=/config/genesis.json
+      --node-private-key-file=/config/key
+      --data-path=/data
+      --min-gas-price=0
+      --rpc-http-enabled
+      --rpc-http-host=0.0.0.0
+      --rpc-http-port=8545
+      --rpc-http-api=ETH,NET,WEB3,QBFT,TXPOOL
+      --rpc-http-cors-origins=*
+      --host-allowlist=*
+      --p2p-host=172.28.0.14
+      --p2p-port=30303
+      --bootnodes=enode://303a80275ccc1d500523cfcb5a7221ddd8eb32855a72928828097c9f45e8a6586f5550b21bfb82f695e045a76a95a9c7900971a84bc8f01fd9af07cb368cec2a@172.28.0.11:30303,enode://5c4ce17da8f6daffa82ab82d2f0944677fc3b4cdb03d38abf031fcc4c3c3c3d1714bd6570d2d24b28319bff7fa82f911e18a3dfadeb2d83f8216404b2cef2a35@172.28.0.12:30303,enode://f832ad63ec5d0c9b28d69bfa071a36756da770b64bacbe232eeb166d68a716017e1b565a36f9f17b7cd3038997912526e2663836fe98f09718b1cabd11745dfe@172.28.0.13:30303
+    ports:
+      - "8553:8545"
+    volumes:
+      - ./genesis.json:/config/genesis.json:ro
+      - ./nodes/node4/key:/config/key:ro
+      - validator4-data:/data
+    networks:
+      besu:
+        ipv4_address: 172.28.0.14
+
+networks:
+  besu:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+
+volumes:
+  validator1-data:
+  validator2-data:
+  validator3-data:
+  validator4-data:

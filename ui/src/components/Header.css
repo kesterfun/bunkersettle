@@ -124,3 +124,9 @@
   font-weight: 700;
   padding: 0.4rem var(--gutter);
 }
+.hd-net-besu {
+  color: var(--ink);
+  font-weight: 700;
+  background: var(--yellow);
+  padding: 0.1rem 0.5rem;
+}

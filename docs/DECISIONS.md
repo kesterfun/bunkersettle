@@ -105,3 +105,17 @@ Choices made during the build that SPEC.md does not cover.
 - **UI.** Each oracle panel gets a "Sign only (no gas)" button. The signature (with order, value, hash, deadline and signer) is kept in a "Signed submissions" list, saved in `sessionStorage` so it survives a page reload and "Change account". Any connected account can press Relay. The deadline is the estimated chain time plus 15 minutes, so the Fast-forward buttons do not make a fresh signature look expired. The EIP-712 domain is read from the contract's `eip712Domain()`, not hard-coded.
 - **Tests.** 247 tests (51 new in `test/signed.test.ts`), 99.36% lines. Scenario 6 in `npm run scenarios` runs the signed flow headless, including one rejected relay.
 - **Still mocked.** This changes how an oracle submits, not who the oracles are. The signing accounts are still demo role accounts, and real meter, e-BDN and lab integrations remain a non-goal (SPEC 1).
+
+## Stretch – Besu QBFT network
+
+- **Custom compose, not the Quorum Developer Quickstart.** The quickstart bundles Tessera, Grafana, Prometheus, Loki and a block explorer; none is needed. `besu/docker-compose.yml` is a 4-validator network on the official `hyperledger/besu:26.10.2` image (pinned, not `latest`), generated with `besu operator generate-blockchain-config`. The input is `besu/qbftConfigFile.json`; the output is `besu/genesis.json` and `besu/nodes/node1..4/key(.pub)`.
+- **Chain ID 4520 and RPC port 8550.** 31337 and 8545 belong to Hardhat; different values let both run side by side and keep MetaMask networks distinct. Validators 2 to 4 are on 8551 to 8553 so the UI can show per-validator status. All nodes use CORS `*` and host allowlist `*` for the Vite dev server (dev only).
+- **Block period 2 s**, request timeout 4 s, epoch length 30000. The genesis enables `berlin`, `london`, `shanghaiTime: 0` and `cancunTime: 0`, so the `cancun` bytecode from `hardhat.config.ts` runs unchanged.
+- **Committed dev-only validator keys.** They make the network reproducible and the submission bundle self-contained. They secure nothing real.
+- **Fixed container IPs** (172.28.0.11 to .14); every node lists the other three as bootnodes, so all 4 peer without relying on DNS in enode URLs.
+- **Funded Hardhat accounts.** Hardhat accounts #0 to #19 (mnemonic `test test ... junk`) are prefunded with 1,000,000 ETH in the genesis, so `seed.ts`, `scenarios.ts` and the MetaMask account setup are unchanged.
+- **Gas.** `zeroBaseFee: true` and `--min-gas-price=0`: transactions are free, so no funding problems. Block gas limit 30,000,000. The `besu` Hardhat network uses automatic gas estimation and a 120 s HTTP timeout.
+- **Manifest.** `deployments.json` gains `networkName`, `rpcUrl` and, on Besu only, `besuNodes` (name, RPC URL and validator address per node; the address is derived from `key.pub`). The UI uses `VITE_RPC_URL ?? rpcUrl ?? http://127.0.0.1:8545`. The header badge and Network panel switch to Besu mode when `web3_clientVersion` starts with `besu`.
+- **Proposer of a block** is the block `miner` field, which matches `qbft_getSignerMetrics` (checked on a live chain). The panel reads `miner` from each node's latest block.
+- **Time.** Nothing in the scripts needs time travel on Besu: scenarios use a 2-minute retention window, 7-day delivery deadlines and 15-minute signature deadlines, and no `evm_*` calls. The Fast-forward control stays hidden off chain 31337.
+- **Halt detection** in the UI: no new block on any reachable validator for more than 6 s shows "Halted - needs 3 of 4 validators".

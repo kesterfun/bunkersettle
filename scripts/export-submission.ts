@@ -104,6 +104,17 @@ function exportUi(): void {
   }
 }
 
+// Besu network files, including the dev-only validator keys needed to reproduce the network.
+function exportBesu(): void {
+  if (!fs.existsSync(path.join(ROOT, "besu"))) {
+    warnings.push("besu/ not found, skipped");
+    return;
+  }
+  for (const rel of walk("besu")) {
+    copyFile(rel, rel);
+  }
+}
+
 function writeManifest(): void {
   const lines = [
     "BunkerSettle submission bundle",
@@ -148,6 +159,7 @@ function main(): void {
   exportTypeScriptTree("scripts");
   exportTypeScriptTree("test");
   exportUi();
+  exportBesu();
 
   writeManifest();
 
