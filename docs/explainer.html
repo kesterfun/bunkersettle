@@ -858,6 +858,26 @@ LabResult(uint256 id, bool passed, bytes32 reportHash, uint256 deadline)
       <div class="tier t-val"><h3>It does not prove</h3><ul class="srcs"><li>That the reading is true. An oracle could sign a wrong number, and the contract would record it as that oracle's report.</li><li>That one organisation checked another's data. Cross-checking is done by the contract, which compares the meter figure with the e-BDN figure.</li></ul></div>
     </div>
     <p class="note prose">The protection against a wrong number comes from the design around it: separate reporters for quantity and quality, a tolerance check between the two quantities, and the dispute process when they disagree.</p>
+
+    <h3>How a signed report travels</h3>
+    <div class="cons">
+      <div class="cstep"><span class="cno">1</span><b>Sign on the barge</b><span>The meter system signs the reading and the ticket fingerprint with its private key. This works offline.</span></div>
+      <div class="cstep"><span class="cno">2</span><b>Carry it to a connected party</b><span>When the barge has a link, it passes the data and signature to the supplier's agent or the port platform.</span></div>
+      <div class="cstep"><span class="cno">3</span><b>Relay and pay the gas</b><span>The relayer sends the quantity, ticket fingerprint, deadline and signature to the contract.</span></div>
+      <div class="cstep"><span class="cno">4</span><b>The contract checks and records</b><span>It recovers the signer, checks the role, stores the reading and moves the order on once the e-BDN agrees.</span></div>
+    </div>
+    <p class="note prose">The signature has to be relayed before its deadline. The app uses 15 minutes. A real deployment would allow hours to fit a barge's connectivity. On the Besu demo network the gas price is zero, and validators sign blocks, so there is no mining.</p>
+
+    <h3>Why tampering fails</h3>
+    <p class="prose">The contract never accepts the signer's address as input. It rebuilds the message from the values it was sent and recovers the address from the signature. If anyone changes the quantity, the message changes, and the old signature then recovers to an unrelated address that holds no role, so the report is refused with <code>NotAuthorized</code>. Producing a signature that recovers to the oracle's address for the new number needs the oracle's private key. The signature is not a hash of the key: it is made from the message and the key together, so it works only for that exact message.</p>
+
+    <h3>Limits to know about</h3>
+    <ul class="pain">
+      <li><b>Key custody.</b> A stolen oracle key produces valid but false reports. The registry can revoke or suspend the role, after which signatures from that key fail at relay time.</li>
+      <li><b>Withholding.</b> Whoever holds a signature can decline to send it. The delivery deadline and the dispute process cover that case.</li>
+      <li><b>Two signatures for one order.</b> The first one relayed wins, so an oracle should sign one report per order.</li>
+      <li><b>Wrong data at the source.</b> A miscalibrated meter signs a false number validly. That is why the e-BDN is a second, independent source and the lab reports separately.</li>
+    </ul>
   </div>
 </section>
 
