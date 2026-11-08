@@ -1,4 +1,4 @@
-import { useChain, EXPECTED_CHAIN_ID, NETWORK_NAME, type View } from "../chain/ChainContext";
+import { useChain, EXPECTED_CHAIN_ID, type View } from "../chain/ChainContext";
 import { ROLE_LABEL, isBunkering, shortHex } from "../domain";
 import { BravoFlag } from "./ui";
 import "./Header.css";
@@ -41,7 +41,7 @@ export function Header() {
               Besu QBFT · chain {EXPECTED_CHAIN_ID} · block {c.blockNumber}
             </span>
           )}
-          {!c.rpcOk && <span className="hd-warn">Local node not reachable. Run {NETWORK_NAME === "besu" ? "npm run besu:up" : "npm run node"}.</span>}
+          {!c.rpcOk && <span className="hd-warn">Local node not reachable. Run npm run besu:up.</span>}
           {!c.hasMetaMask ? (
             <span className="hd-warn">Install MetaMask to sign transactions.</span>
           ) : !c.account ? (
@@ -85,20 +85,6 @@ export function Header() {
           </button>
         ))}
         <span className="hd-spacer" />
-        {c.isDevChain && (
-          <span className="hd-ff">
-            <span className="label">Fast-forward</span>
-            <button className="btn btn-sm btn-ghost" type="button" onClick={() => void c.fastForward(120)}>
-              +2 min
-            </button>
-            <button className="btn btn-sm btn-ghost" type="button" onClick={() => void c.fastForward(86400)}>
-              +1 day
-            </button>
-            <button className="btn btn-sm btn-ghost" type="button" onClick={() => void c.fastForward(8 * 86400)}>
-              +8 days
-            </button>
-          </span>
-        )}
       </nav>
       {c.paused && <div className="hd-paused">Order creation and funding are paused by the admin.</div>}
     </header>

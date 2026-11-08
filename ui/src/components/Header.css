@@ -112,12 +112,6 @@
 .hd-spacer {
   flex: 1;
 }
-.hd-ff {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-right: 0.5rem;
-}
 .hd-paused {
   background: var(--red);
   color: #ffffff;

@@ -105,7 +105,7 @@ async function main() {
   const dep = readDeployments();
   const addr = (name: string) => {
     const c = dep.contracts[name];
-    if (!c) throw new Error(`deployments.json has no ${name}. Run "npm run deploy" first.`);
+    if (!c) throw new Error(`deployments.json has no ${name}. Run "npm run besu:up" then "npm run deploy" first.`);
     return c.address;
   };
   const abi = (name: string) => dep.contracts[name].abi as InterfaceAbi;

@@ -16,7 +16,6 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: { chainId: 31337 },
-    localhost: { url: "http://127.0.0.1:8545", chainId: 31337 },
     // Local 4-validator Besu QBFT network (npm run besu:up). Node 1 JSON-RPC; see besu/README.md.
     besu: {
       url: "http://127.0.0.1:8550",

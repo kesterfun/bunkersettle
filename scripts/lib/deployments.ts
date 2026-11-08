@@ -19,7 +19,7 @@ export interface BesuNode {
 
 export interface Deployments {
   chainId: number;
-  /** Hardhat network name the contracts were deployed through (hardhat, localhost, besu). */
+  /** Hardhat network name the contracts were deployed through (besu). */
   networkName: string;
   /** JSON-RPC URL of that network. */
   rpcUrl: string;
@@ -33,7 +33,7 @@ export interface Deployments {
 /** Reads the deployment manifest written by scripts/deploy.ts. Throws if it is missing. */
 export function readDeployments(): Deployments {
   if (!fs.existsSync(DEPLOYMENTS_PATH)) {
-    throw new Error(`Missing ${DEPLOYMENTS_PATH}. Run "npm run deploy" first.`);
+    throw new Error(`Missing ${DEPLOYMENTS_PATH}. Run "npm run besu:up" then "npm run deploy" first.`);
   }
   return JSON.parse(fs.readFileSync(DEPLOYMENTS_PATH, "utf8")) as Deployments;
 }

@@ -41,7 +41,7 @@ simplest option that keeps every rule in §5 enforced **on-chain**, and note the
 | Libraries | OpenZeppelin Contracts 5.x (`AccessControl`, `Pausable`, `ReentrancyGuard`, `ERC20`, `SafeERC20`) |
 | Tests / scripts | TypeScript |
 | UI | Vite + React + TypeScript, ethers v6, MetaMask |
-| Chain (dev/demo) | `npx hardhat node` (chainId 31337) |
+| Chain (demo) | 4-validator Besu QBFT (chainId 4520, RPC 8550); tests use in-process Hardhat network |
 
 Node 22 is installed. Editor is Zed; no Remix-specific code, but contracts must also compile in
 Remix (only `@openzeppelin/...` and relative imports).
@@ -226,7 +226,7 @@ ClaimExpired(uint256 id)
 
 **Happy paths**
 - Full flow: create → accept → fund → meter + eBDN within tolerance → 90% to supplier → lab pass → retention to supplier, excess refunded to bank → `Settled`. Assert every balance.
-- Same flow but lab never reports → `releaseAfterTimeout` after `evm_increaseTime` → `Settled`.
+- Same flow but lab never reports → `releaseAfterTimeout` after the retention window → `Settled`.
 - Over-delivery inside tolerance pays for delivered qty; under-delivery inside tolerance pays less and refunds the rest.
 - Cancel before funding; `cancelExpired` after deadline refunds bank.
 - Dispute resolved 70/30 → balances split correctly → `Resolved`.
@@ -262,7 +262,7 @@ ClaimExpired(uint256 id)
 
 Single-page Vite app. Reads `ui/src/deployments.json` written by `deploy.ts`.
 
-- **Header**: connected account, its registry name and role(s), network check (31337), "Connect MetaMask".
+- **Header**: connected account, its registry name and role(s), network check (4520), "Connect MetaMask".
 - **Home – harbour chart**: every order pinned at its anchorage, coloured by state, with an order list beside it (filterable by anchorage). More than ~6 orders at one anchorage collapse into a cluster marker with a count and state ring. Selecting an order opens its order screen.
 - **Order screen**: status pipeline, status stamp, escrow tank (held / retention), activity for that order, and the actions the connected account may take.
 - **Buyer view**: create order form (prefilled demo values, anchorage dropdown), list of own orders with a status timeline.
@@ -273,7 +273,6 @@ Single-page Vite app. Reads `ui/src/deployments.json` written by `deploy.ts`.
 - **Activity log**: live feed of all contract events (`contract.on`), newest first, with tx hash, block number, decoded args.
 - **Market panel**: monthly Singapore bunker sales chart from data.gov.sg dataset `d_4f5abbf4486bf8e52bbed3be56dde562` (datastore_search API). If CORS blocks the browser call, add `scripts/fetch-sales.ts` that saves the data to `ui/public/bunker-sales.json` and read that instead.
 - **Errors**: never pre-validate in a way that hides contract reverts. Send the tx and show the decoded custom error (name + args) in a toast. A "UI checks" toggle may add client-side checks, default **off**.
-- **Dev helper** (only on chainId 31337): "Fast-forward time" button calling `evm_increaseTime` + `evm_mine`.
 
 Keep styling plain and readable on a projector (large type, high contrast). Visual direction: "signal board" (white, thick black rules, signal-flag colours) with a chart-style home view; a projector-mode toggle enlarges type. A demo scenario stepper lists the §9 steps and which account acts next.
 
@@ -299,9 +298,9 @@ npm run compile     hardhat compile
 npm test            hardhat test
 npm run coverage    hardhat coverage
 npm run gas         REPORT_GAS=true hardhat test
-npm run node        hardhat node
-npm run deploy      hardhat run scripts/deploy.ts --network localhost && hardhat run scripts/seed.ts --network localhost
-npm run scenarios   hardhat run scripts/scenarios.ts --network localhost
+npm run besu:up     docker compose -f besu/docker-compose.yml up -d   (also besu:down, besu:reset, besu:logs)
+npm run deploy      hardhat run scripts/deploy.ts --network besu && hardhat run scripts/seed.ts --network besu
+npm run scenarios   hardhat run scripts/scenarios.ts --network besu
 npm run ui          cd ui && npm run dev
 npm run submission  hardhat run scripts/export-submission.ts
 npm run fetch-sales ts-node scripts/fetch-sales.ts   (refreshes ui/public/bunker-sales.json)
@@ -310,7 +309,7 @@ npm run fetch-sales ts-node scripts/fetch-sales.ts   (refreshes ui/public/bunker
 ---
 
 ## 11. README must include
-- Prereqs, install, the commands above in order, MetaMask setup (add localhost 8545 / 31337, import accounts #0–#8 from `hardhat node` output).
+- Prereqs, install, the commands above in order, MetaMask setup (add Besu 8550 / 4520, import accounts #0–#8 from the Hardhat test mnemonic).
 - **Run in Remix** fallback: deploy order and constructor args (§5.8), wiring calls, which account plays which role, and the 5 scenarios as click steps.
 - Submission note: assignment wants source + config only, with `.sol` renamed `.txt` – produced by `npm run submission` into `submission/`.
 
@@ -323,7 +322,7 @@ npm run fetch-sales ts-node scripts/fetch-sales.ts   (refreshes ui/public/bunker
 | 1 | Scaffold | Hardhat + TS + OZ installed, `npm run compile` passes on empty contracts |
 | 2 | Contracts | All §5 contracts compile; wiring works in a fixture |
 | 3 | Tests | Every §7 bullet has a passing test; coverage ≥ 90% lines |
-| 4 | Scripts | `npm run node` + `npm run deploy` gives a seeded chain; `npm run scenarios` runs 1–5 cleanly |
+| 4 | Scripts | `npm run besu:up` + `npm run deploy` gives a seeded chain; `npm run scenarios` runs 1–5 cleanly |
 | 5 | UI | Demo runs A to C can be run end to end in the browser with MetaMask; activity log shows every event |
 | 6 | Docs | README complete; `npm run submission` produces the bundle; `docs/DECISIONS.md` up to date |
 

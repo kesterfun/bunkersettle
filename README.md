@@ -21,31 +21,35 @@ cd ui && npm install
 
 ## Run order
 
-Run these in order. Keep the node running in its own terminal.
+Prerequisite: Docker Desktop running. Run these in order.
 
 | Step | Command | What it does |
 |---|---|---|
-| 1 | `npm run node` | Starts a local Hardhat chain at `http://127.0.0.1:8545` (chain ID 31337). Prints 20 test accounts and private keys. Leave it running. |
+| 1 | `npm run besu:up` | Starts 4 validator containers (`bunkersettle-validator1` to `4`, image `hyperledger/besu:26.10.2`): a Hyperledger Besu QBFT network, 2-second blocks, chain ID 4520. Wait about 20 seconds for them to peer. |
 | 2 | `npm run deploy` | Deploys and wires the seven contracts and writes `ui/src/deployments.json`. Then it registers the demo participants, mints 5,000,000 mSGD to the bank and approves the escrow. |
-| 3 (optional) | `npm run scenarios` | Runs demo scenarios 1 to 6 headless and prints balances after each step. Good for rehearsal. |
+| 3 (optional) | `npm run scenarios` | Runs demo runs A to C plus the signed-submission extra headless and prints balances after each step. Good for rehearsal. |
 | 4 | `npm run ui` | Starts the Vite app at http://localhost:5173. |
 
-The UI needs `npm run deploy` to have run first. It imports `ui/src/deployments.json`, which is git-ignored and changes on every deploy. If you restart the node, run `npm run deploy` again.
+The UI needs `npm run deploy` to have run first. It imports `ui/src/deployments.json`, which is git-ignored and changes on every deploy. If you wipe the chain with `npm run besu:reset`, run `besu:up` and `deploy` again.
+
+Other Besu commands: `npm run besu:logs` (follow logs), `npm run besu:down` (stop, keep the chain), `npm run besu:reset` (stop and wipe all chain state; clear MetaMask activity data afterwards).
+
+JSON-RPC on the host: validator 1 on 8550 (the main endpoint), validators 2 to 4 on 8551 to 8553. Config, genesis and the dev-only keys are in `besu/` (see `besu/README.md`). Hardhat accounts #0 to #19 are prefunded and gas price is zero. The UI shows a Besu badge in the header and a Network panel on the Harbour view with the four validators.
+
+Time-based paths cannot be shown live on a real chain. `cancelExpired` (after the 7-day delivery deadline) is covered by the tests. `releaseAfterTimeout` works live: the scenarios use a 120 s retention window, so wait for it to pass.
 
 ## All commands
 
 | Command | What it does |
 |---|---|
 | `npm run compile` | Compiles the contracts (`hardhat compile`). |
-| `npm test` | Runs the Hardhat test suite (247 tests). |
+| `npm test` | Runs the Hardhat test suite on the in-process Hardhat network. |
 | `npm run coverage` | Runs solidity-coverage (99.4% lines). Report goes to `coverage/`. |
 | `npm run gas` | Runs the tests with the gas reporter on. |
-| `npm run node` | Starts the local chain. |
-| `npm run deploy` | Deploys, wires and seeds (see above). |
-| `npm run scenarios` | Runs demo runs A to C headless, plus the signed-submission extra. |
+| `npm run deploy` | Deploys, wires and seeds on Besu (see above). |
+| `npm run scenarios` | Runs demo runs A to C headless against Besu, plus the signed-submission extra. |
 | `npm run ui` | Starts the Vite dev server. |
-| `npm run besu:up` / `besu:down` / `besu:reset` / `besu:logs` | Start, stop, wipe and follow the local Besu QBFT network (see Running on Besu QBFT). |
-| `npm run deploy:besu` / `scenarios:besu` | Deploy and seed on Besu; run the scenarios on Besu. |
+| `npm run besu:up` / `besu:down` / `besu:reset` / `besu:logs` | Start, stop, wipe and follow the local Besu QBFT network (see Run order). |
 | `npm run fetch-sales` | Refreshes `ui/public/bunker-sales.json` from data.gov.sg (the fallback for the Market view). |
 | `npm run submission` | Builds the submission bundle in `submission/` (see below). |
 
@@ -55,48 +59,20 @@ The UI needs `npm run deploy` to have run first. It imports `ui/src/deployments.
 
    | Field | Value |
    |---|---|
-   | Network name | Hardhat localhost |
-   | RPC URL | `http://127.0.0.1:8545` |
-   | Chain ID | 31337 |
+   | Network name | Besu QBFT (BunkerSettle) |
+   | RPC URL | `http://127.0.0.1:8550` |
+   | Chain ID | 4520 |
    | Currency symbol | ETH |
 
-2. Import accounts #1 to #9 into MetaMask (#9 is the financier, needed for run A). Use the private keys printed by `npm run node`. Account #0 is the Port Operator (Admin) and is only needed if you want to act as admin; import it too if you do.
+2. Import accounts #1 to #9 into MetaMask (#9 is the financier, needed for run A). The accounts come from the standard Hardhat test mnemonic (`test test test test test test test test test test test junk`), which the Besu config also uses. Account #N is the Nth address of that mnemonic. Account #0 is the Port Operator (Admin) and is only needed if you want to act as admin; import it too if you do.
 3. Open http://localhost:5173 and connect every imported account to the site.
 4. Use the **Change account** button in the header to open MetaMask's account picker.
 
 These are Hardhat's public test keys. Anyone can read them. Never use them, or send funds to them, on a real network.
 
-After you restart the node, clear each account's activity in MetaMask (Settings, Advanced, Clear activity tab data). Otherwise MetaMask reuses stale nonces and transactions fail.
+After `npm run besu:reset`, clear each account's activity in MetaMask (Settings, Advanced, Clear activity tab data). Otherwise MetaMask reuses stale nonces and transactions fail.
 
-## Running on Besu QBFT
-
-The same contracts, scripts and UI also run on a local 4-validator Hyperledger Besu network (QBFT consensus, 2-second blocks, chain ID 4520). The UI shows a Besu badge in the header and a Network panel on the Harbour view with the four validators.
-
-Prerequisite: Docker Desktop running. Besu uses port 8550 and Hardhat 8545, so both can run at once, but `ui/src/deployments.json` points at only one of them.
-
-| Step | Command | What it does |
-|---|---|---|
-| 1 | `npm run besu:up` | Starts 4 validator containers (`bunkersettle-validator1` to `4`, image `hyperledger/besu:26.10.2`). Wait about 20 seconds for them to peer. |
-| 2 | `npm run deploy:besu` | Deploys, wires and seeds on Besu and writes `ui/src/deployments.json` for Besu. `npm run deploy` rewrites it for Hardhat. |
-| 3 (optional) | `npm run scenarios:besu` | Runs scenarios 1 to 6 headless against Besu. |
-| 4 | `npm run ui` | Starts the UI at http://localhost:5173. |
-
-Other commands: `npm run besu:logs` (follow logs), `npm run besu:down` (stop, keep the chain), `npm run besu:reset` (stop and wipe all chain state; then run `besu:up` and `deploy:besu` again and clear MetaMask activity data).
-
-JSON-RPC on the host: validator 1 on 8550 (the main endpoint), validators 2 to 4 on 8551 to 8553. Config, genesis and the dev-only keys are in `besu/` (see `besu/README.md`). Hardhat accounts #0 to #19 are prefunded, so the accounts and keys are the same as on Hardhat.
-
-MetaMask network for Besu:
-
-| Field | Value |
-|---|---|
-| Network name | Besu QBFT |
-| RPC URL | `http://127.0.0.1:8550` |
-| Chain ID | 4520 |
-| Currency symbol | ETH |
-
-Gas price is zero on this network. The Fast-forward buttons are hidden because a real chain cannot be time-travelled.
-
-### Fault tolerance demo
+## Fault tolerance demo
 
 QBFT with 4 validators needs 3 of 4 to agree: it survives 1 failed validator and halts at 2. With the UI open on the Harbour view:
 
@@ -138,7 +114,6 @@ The seed script registers these accounts. All names are fictional.
 Header controls:
 
 - **Change account** opens the MetaMask picker.
-- **Fast-forward** moves chain time by +2 min, +1 day or +8 days. It only shows on chain 31337.
 - **UI checks** toggle adds client-side checks. It is off by default so contract reverts stay visible.
 - **Projector mode** enlarges the type.
 
@@ -339,9 +314,8 @@ SPEC.md         source of truth
 
 | Problem | Fix |
 |---|---|
-| UI shows the node is not reachable | Start `npm run node` and keep it running. Then run `npm run deploy`. |
-| UI says wrong network | Switch MetaMask to "Hardhat localhost" (chain ID 31337). |
-| UI cannot find contracts, or calls fail after a node restart | Run `npm run deploy` again. The addresses in `ui/src/deployments.json` change on every deploy. |
+| UI shows the node is not reachable | Start Docker Desktop, run `npm run besu:up`, wait about 20 seconds, then `npm run deploy`. |
+| UI says wrong network | Switch MetaMask to "Besu QBFT (BunkerSettle)" (chain ID 4520). |
+| UI cannot find contracts, or calls fail after `besu:reset` | Run `npm run deploy` again. The addresses in `ui/src/deployments.json` change on every deploy. |
 | `NotAuthorized` for an account you expected to work | The account is not registered for that role, or you picked the wrong MetaMask account. Account #8 is unregistered on purpose. Re-run `npm run deploy` to re-seed. |
-| MetaMask transactions hang or fail with nonce errors | You restarted the node. Clear each account's activity tab data in MetaMask (Settings, Advanced). |
-| `npm run node` fails with "address already in use" on port 8545 | Another node is running. Stop it, or close the old terminal, then start again. |
+| MetaMask transactions fail with nonce errors | You ran `npm run besu:reset`. Clear each account's activity tab data in MetaMask (Settings, Advanced, Clear activity tab data). |

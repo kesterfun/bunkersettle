@@ -144,3 +144,10 @@ Choices made during the build that SPEC.md does not cover.
 - **Money row lists real recipients.** "Paid to ..." cells come from `Released` and `Split` events, since a claim sold after the 90% tranche splits payouts between supplier and financier.
 - **Approve then buy.** A financier with too little allowance gets two transactions in one click: approve exactly the offer price, then buy at that price.
 - **Wrong-party buttons stay visible.** As with other order actions, buy and offer buttons for the wrong party sit in a collapsed group so the revert can be demonstrated; locked claims show a reason instead of buttons.
+
+## Besu-only demo (2026-11-08)
+
+- **Why.** The enterprise platform (Besu QBFT) is what is demoed, and a single network avoids MetaMask chain confusion between 31337 and 4520.
+- **Removed.** The `node` script, the `localhost` Hardhat network, the `deploy:besu` / `scenarios:besu` duplicates (`deploy` and `scenarios` now target `--network besu`), the UI Fast-forward buttons and their `evm_increaseTime` / `evm_mine` code, and the 31337 / 8545 UI defaults (now chain 4520, `http://127.0.0.1:8550`, "Besu QBFT (BunkerSettle)").
+- **Tests unchanged.** `npm test`, `coverage` and `gas` still use the in-process `hardhat` network (chainId 31337).
+- **No time travel.** Expiry paths such as `cancelExpired` after the 7-day delivery deadline are shown through the tests, not live. `releaseAfterTimeout` works live after the 120 s retention window.

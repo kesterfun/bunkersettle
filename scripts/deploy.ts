@@ -30,7 +30,7 @@ function besuNodes(rpcUrl: string): BesuNode[] {
 async function main() {
   const [deployer] = await ethers.getSigners();
   const { chainId } = await ethers.provider.getNetwork();
-  const rpcUrl = "url" in network.config ? network.config.url : "http://127.0.0.1:8545";
+  const rpcUrl = "url" in network.config ? network.config.url : "http://127.0.0.1:8550";
 
   const registry: ParticipantRegistry = await ethers.deployContract("ParticipantRegistry");
   await registry.waitForDeployment();

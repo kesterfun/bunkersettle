@@ -45,13 +45,11 @@ export interface BesuNode {
   validator: string;
 }
 
-export const RPC_URL: string = import.meta.env.VITE_RPC_URL ?? manifest.rpcUrl ?? "http://127.0.0.1:8545";
+export const RPC_URL: string = import.meta.env.VITE_RPC_URL ?? manifest.rpcUrl ?? "http://127.0.0.1:8550";
 export const EXPECTED_CHAIN_ID: number = deployments.chainId;
-export const NETWORK_NAME: string = manifest.networkName ?? (EXPECTED_CHAIN_ID === 31337 ? "localhost" : "unknown");
 export const BESU_NODES: BesuNode[] = manifest.besuNodes ?? [];
 /** Name shown to the user and offered to MetaMask for this chain. */
-export const CHAIN_LABEL: string =
-  NETWORK_NAME === "besu" ? "Besu QBFT (BunkerSettle)" : EXPECTED_CHAIN_ID === 31337 ? "Hardhat localhost" : `Chain ${EXPECTED_CHAIN_ID}`;
+export const CHAIN_LABEL = "Besu QBFT (BunkerSettle)";
 
 export type ContractName = keyof typeof deployments.contracts;
 const NAMES = Object.keys(deployments.contracts) as ContractName[];
@@ -129,10 +127,6 @@ export interface ChainState {
   clientVersion: string | null;
   /** The RPC node reports itself as Hyperledger Besu. */
   isBesu: boolean;
-  /** chainId 31337 only. */
-  isDevChain: boolean;
-  /** evm_increaseTime + evm_mine. */
-  fastForward(seconds: number): Promise<void>;
 
   view: View;
   orderId: number | null;
@@ -152,7 +146,7 @@ export function useChain(): ChainState {
   return ctx;
 }
 
-/** Estimated chain time in seconds, ticking once per second. Tracks evm_increaseTime. */
+/** Estimated chain time in seconds, ticking once per second. */
 export function useChainNow(): number {
   return useContext(ClockContext);
 }
@@ -580,17 +574,6 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     [upsertToast, dismissToast],
   );
 
-  const isDevChain = EXPECTED_CHAIN_ID === 31337;
-  const fastForward = useCallback(
-    async (seconds: number) => {
-      if (!isDevChain) return;
-      await provider.send("evm_increaseTime", [seconds]);
-      await provider.send("evm_mine", []);
-      void refresh();
-    },
-    [provider, isDevChain, refresh],
-  );
-
   // ---------------------------------------------------------------- ui state
   const [view, setView] = useState<View>("harbour");
   const [orderId, setOrderId] = useState<number | null>(null);
@@ -636,8 +619,6 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     sign,
     clientVersion,
     isBesu: !!clientVersion && clientVersion.toLowerCase().startsWith("besu"),
-    isDevChain,
-    fastForward,
     view,
     orderId,
     go,
