@@ -8,6 +8,7 @@ import {IBunkerOrder} from "./interfaces/IBunkerOrder.sol";
 import {IPaymentEscrow} from "./interfaces/IPaymentEscrow.sol";
 import {IDisputeManager} from "./interfaces/IDisputeManager.sol";
 import {IDeliveryRecord} from "./interfaces/IDeliveryRecord.sol";
+import {ISettlementClaim} from "./interfaces/ISettlementClaim.sol";
 import "./interfaces/BunkerTypes.sol";
 
 /// @title BunkerOrder
@@ -15,15 +16,17 @@ import "./interfaces/BunkerTypes.sol";
 ///         (besides DisputeManager.split).
 contract BunkerOrder is IBunkerOrder, RoleGuard, Pausable, ReentrancyGuard {
     IPaymentEscrow public immutable escrow;
-    address public deliveryRecord;
+    address public override deliveryRecord;
     address public qualityRecord;
     address public disputeManager;
     bool public modulesSet;
+    address public claim;
 
     mapping(uint256 => Order) private _orders;
     uint256 private _count;
 
     event ModulesSet(address deliveryRecord, address qualityRecord, address disputeManager);
+    event ClaimSet(address claim);
     event OrderCreated(
         uint256 indexed id,
         address indexed buyer,
@@ -86,6 +89,16 @@ contract BunkerOrder is IBunkerOrder, RoleGuard, Pausable, ReentrancyGuard {
         qualityRecord = quality_;
         disputeManager = dispute_;
         emit ModulesSet(delivery_, quality_, dispute_);
+    }
+
+    /// @notice Wire the SettlementClaim contract that tokenises the supplier's right to be paid. ADMIN only, once.
+    /// @param claim_ SettlementClaim address.
+    function setClaim(address claim_) external {
+        _requireRole(ROLE_ADMIN, msg.sender);
+        if (claim != address(0)) revert AlreadyWired();
+        if (claim_ == address(0)) revert InvalidParameter("claim");
+        claim = claim_;
+        emit ClaimSet(claim_);
     }
 
     /// @notice Pause order creation and funding. ADMIN only.
@@ -163,10 +176,12 @@ contract BunkerOrder is IBunkerOrder, RoleGuard, Pausable, ReentrancyGuard {
         if (o.bank != msg.sender) revert NotOrderParty(id, msg.sender);
         _requireStatus(o, Status.Accepted);
         if (block.timestamp > o.deliveryDeadline) revert DeadlinePassed(id);
+        if (claim == address(0)) revert ClaimNotSet();
         uint256 amount = (o.qtyKg * o.pricePerTonne / 1000) * (10_000 + o.toleranceBps) / 10_000;
         o.fundedAmount = amount;
         o.status = Status.Funded;
         escrow.deposit(id, msg.sender, amount);
+        ISettlementClaim(claim).mint(id, o.supplier);
         emit OrderFunded(id, msg.sender, amount);
     }
 
@@ -194,6 +209,7 @@ contract BunkerOrder is IBunkerOrder, RoleGuard, Pausable, ReentrancyGuard {
         o.refundedAmount += refunded;
         o.status = Status.Cancelled;
         escrow.refund(id, o.bank, refunded);
+        ISettlementClaim(claim).burn(id);
         emit OrderCancelled(id, msg.sender, refunded);
     }
 
@@ -230,7 +246,7 @@ contract BunkerOrder is IBunkerOrder, RoleGuard, Pausable, ReentrancyGuard {
         o.releasedAmount = firstTranche;
         o.approvedAt = block.timestamp;
         o.status = Status.QuantityApproved;
-        if (firstTranche > 0) escrow.release(id, o.supplier, firstTranche);
+        if (firstTranche > 0) escrow.release(id, ISettlementClaim(claim).payeeOf(id), firstTranche);
         emit QuantityApproved(id, deliveredKg, payable_, firstTranche);
     }
 
@@ -305,6 +321,13 @@ contract BunkerOrder is IBunkerOrder, RoleGuard, Pausable, ReentrancyGuard {
         return o.fundedAmount - o.releasedAmount - o.refundedAmount;
     }
 
+    /// @notice Current recipient of the supplier's payouts for an order: the settlement claim holder.
+    /// @param id Order id.
+    function payeeOf(uint256 id) external view override returns (address) {
+        _get(id);
+        return ISettlementClaim(claim).payeeOf(id);
+    }
+
     // ------------------------------------------------------------- internals
 
     function _get(uint256 id) private view returns (Order storage) {
@@ -331,7 +354,7 @@ contract BunkerOrder is IBunkerOrder, RoleGuard, Pausable, ReentrancyGuard {
         o.releasedAmount += retention;
         o.refundedAmount += excess;
         o.status = Status.Settled;
-        if (retention > 0) escrow.release(id, o.supplier, retention);
+        if (retention > 0) escrow.release(id, ISettlementClaim(claim).payeeOf(id), retention);
         if (excess > 0) escrow.refund(id, o.bank, excess);
         bytes32 invoiceHash = keccak256(abi.encode(id, o.dscHash, o.deliveredKg, o.payableAmount, block.timestamp));
         emit OrderSettled(id, o.payableAmount, excess, invoiceHash, DocType.DSI);

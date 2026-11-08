@@ -7,6 +7,7 @@ import type {
   DeliveryRecord,
   QualityRecord,
   DisputeManager,
+  SettlementClaim,
 } from "../../typechain-types";
 
 /** 18-decimal token units. */
@@ -27,7 +28,7 @@ export const ANCHORAGE = {
 
 /** Deploys all contracts in SPEC 5.8 order, wires them, and seeds the SPEC 9 demo participants. */
 export async function deployFixture() {
-  const [admin, bank, buyer, supplier, meterOracle, ebdnOracle, lab, arbiter, outsider] =
+  const [admin, bank, buyer, supplier, meterOracle, ebdnOracle, lab, arbiter, outsider, financier] =
     await ethers.getSigners();
 
   const registry: ParticipantRegistry = await ethers.deployContract("ParticipantRegistry");
@@ -39,6 +40,11 @@ export async function deployFixture() {
   const order: BunkerOrder = await ethers.deployContract("BunkerOrder", [
     await registry.getAddress(),
     await escrow.getAddress(),
+  ]);
+  const claim: SettlementClaim = await ethers.deployContract("SettlementClaim", [
+    await registry.getAddress(),
+    await order.getAddress(),
+    await token.getAddress(),
   ]);
   const delivery: DeliveryRecord = await ethers.deployContract("DeliveryRecord", [
     await registry.getAddress(),
@@ -54,6 +60,7 @@ export async function deployFixture() {
     await escrow.getAddress(),
   ]);
 
+  await order.setClaim(await claim.getAddress());
   await escrow.setOrderContract(await order.getAddress());
   await escrow.setDisputeManager(await dispute.getAddress());
   await order.setModules(
@@ -71,6 +78,7 @@ export async function deployFixture() {
     EBDN_ORACLE: await registry.EBDN_ORACLE(),
     LAB: await registry.LAB(),
     ARBITER: await registry.ARBITER(),
+    FINANCIER: ethers.id("FINANCIER"),
   };
 
   await registry.register(bank.address, roles.BANK, "Harbour Bank");
@@ -80,9 +88,12 @@ export async function deployFixture() {
   await registry.register(ebdnOracle.address, roles.EBDN_ORACLE, "e-BDN Provider");
   await registry.register(lab.address, roles.LAB, "Fuel Lab");
   await registry.register(arbiter.address, roles.ARBITER, "Arbiter");
+  await registry.register(financier.address, roles.FINANCIER, "Straits Trade Finance");
 
   await token.mint(bank.address, sgd(100_000_000));
   await token.connect(bank).approve(await escrow.getAddress(), ethers.MaxUint256);
+  await token.mint(financier.address, sgd(100_000_000));
+  await token.connect(financier).approve(await claim.getAddress(), ethers.MaxUint256);
 
   return {
     registry,
@@ -92,6 +103,7 @@ export async function deployFixture() {
     delivery,
     quality,
     dispute,
+    claim,
     roles,
     admin,
     bank,
@@ -102,6 +114,7 @@ export async function deployFixture() {
     lab,
     arbiter,
     outsider,
+    financier,
   };
 }
 

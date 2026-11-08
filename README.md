@@ -121,6 +121,7 @@ The seed script registers these accounts. All names are fictional.
 | #6 | Fuel Lab | LAB | 0x976E...0aa9 |
 | #7 | Arbiter | ARBITER | 0x14dC...9955 |
 | #8 | Outsider | none (unregistered) | 0x2361...1E8f |
+| #9 | Straits Trade Finance | FINANCIER | 0xa0Ee...9720 |
 
 ## The UI
 
@@ -237,7 +238,7 @@ Use this if you cannot run Node. Remix has no time travel, so show the retention
 
 ### 2. Pick accounts
 
-Remix VM accounts stand in for the Hardhat accounts. Use the first nine in the Account dropdown.
+Remix VM accounts stand in for the Hardhat accounts. Use the first ten in the Account dropdown.
 
 | Remix account | Plays |
 |---|---|
@@ -250,6 +251,7 @@ Remix VM accounts stand in for the Hardhat accounts. Use the first nine in the A
 | 7th | #6 Lab |
 | 8th | #7 Arbiter |
 | 9th | #8 Outsider (leave unregistered) |
+| 10th | #9 Financier ("Straits Trade Finance") |
 
 ### 3. Deploy in this order
 
@@ -261,23 +263,26 @@ Deploy as the first account. Paste the previous addresses as arguments.
 | 2 | `MockSGD` | `registry` |
 | 3 | `PaymentEscrow` | `registry`, `token` |
 | 4 | `BunkerOrder` | `registry`, `escrow` |
-| 5 | `DeliveryRecord` | `registry`, `order` |
-| 6 | `QualityRecord` | `registry`, `order` |
-| 7 | `DisputeManager` | `registry`, `order`, `escrow` |
+| 5 | `SettlementClaim` | `registry`, `order`, `token` |
+| 6 | `DeliveryRecord` | `registry`, `order` |
+| 7 | `QualityRecord` | `registry`, `order` |
+| 8 | `DisputeManager` | `registry`, `order`, `escrow` |
 
 ### 4. Wire (as admin, each once)
 
 1. `escrow.setOrderContract(order)`
 2. `escrow.setDisputeManager(dispute)`
 3. `order.setModules(delivery, quality, dispute)`
+4. `order.setClaim(claim)` (without it `fundOrder` reverts `ClaimNotSet`)
 
 A second call to any of these reverts with `AlreadyWired`.
 
 ### 5. Seed (as admin)
 
-1. For each participant, call `registry.register(account, role, name)`. Read the role hash from the registry's getters: `BANK()`, `BUYER()`, `SUPPLIER()`, `METER_ORACLE()`, `EBDN_ORACLE()`, `LAB()`, `ARBITER()`. Copy the returned `bytes32` into the call. Use any name string, such as "Harbour Bank".
+1. For each participant, call `registry.register(account, role, name)`. Read the role hash from the registry's getters: `BANK()`, `BUYER()`, `SUPPLIER()`, `METER_ORACLE()`, `EBDN_ORACLE()`, `LAB()`, `ARBITER()`, and register the 10th account (name 'Straits Trade Finance') with the FINANCIER role. The registry has no getter for it; the hash is `keccak256("FINANCIER")` = `0xd98906aba10a86d1b86eb7b3c4e8a69a629f7761a44cfbcb18171e927b37c602`. Copy the returned `bytes32` into the call. Use any name string, such as "Harbour Bank".
 2. `token.mint(bank, 5000000000000000000000000)` (5,000,000 mSGD).
 3. Switch to the bank account. Call `token.approve(escrow, 5000000000000000000000000)` (or a larger amount).
+4. Optional (receivable financing): `token.mint(financier, 5000000000000000000000000)`, then as the financier `token.approve(claim, 5000000000000000000000000)`.
 
 ### 6. Create an order
 

@@ -9,6 +9,7 @@ import type {
   ParticipantRegistry,
   PaymentEscrow,
   QualityRecord,
+  SettlementClaim,
 } from "../typechain-types";
 import { BesuNode, Deployments, DeployedContract, writeDeployments, DEPLOYMENTS_PATH } from "./lib/deployments";
 
@@ -50,6 +51,13 @@ async function main() {
   ]);
   await order.waitForDeployment();
 
+  const claim: SettlementClaim = await ethers.deployContract("SettlementClaim", [
+    registryAddr,
+    await order.getAddress(),
+    await token.getAddress(),
+  ]);
+  await claim.waitForDeployment();
+
   const delivery: DeliveryRecord = await ethers.deployContract("DeliveryRecord", [
     registryAddr,
     await order.getAddress(),
@@ -69,6 +77,7 @@ async function main() {
   ]);
   await dispute.waitForDeployment();
 
+  await (await order.setClaim(await claim.getAddress())).wait();
   await (await escrow.setOrderContract(await order.getAddress())).wait();
   await (await escrow.setDisputeManager(await dispute.getAddress())).wait();
   await (
@@ -84,6 +93,7 @@ async function main() {
     MockSGD: token,
     PaymentEscrow: escrow,
     BunkerOrder: order,
+    SettlementClaim: claim,
     DeliveryRecord: delivery,
     QualityRecord: quality,
     DisputeManager: dispute,

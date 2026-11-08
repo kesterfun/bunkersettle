@@ -115,7 +115,7 @@ contract DisputeManager is IDisputeManager, RoleGuard, ReentrancyGuard {
         uint256 bankAmt = held - supplierAmt;
         d.resolved = true;
         d.supplierShareBps = supplierShareBps;
-        escrow.split(o.id, o.supplier, supplierAmt, o.bank, bankAmt);
+        escrow.split(o.id, order.payeeOf(o.id), supplierAmt, o.bank, bankAmt);
         order.onDisputeResolved(o.id, supplierAmt, bankAmt);
         emit DisputeResolved(disputeId, o.id, supplierShareBps, supplierAmt, bankAmt);
     }

@@ -95,6 +95,7 @@ bytes32 constant ROLE_METER_ORACLE = keccak256("METER_ORACLE");
 bytes32 constant ROLE_EBDN_ORACLE = keccak256("EBDN_ORACLE");
 bytes32 constant ROLE_LAB = keccak256("LAB");
 bytes32 constant ROLE_ARBITER = keccak256("ARBITER");
+bytes32 constant ROLE_FINANCIER = keccak256("FINANCIER");
 
 error NotAuthorized(bytes32 role, address account);
 error AccountSuspended(address account);
@@ -109,3 +110,9 @@ error InsufficientEscrow(uint256 id, uint256 requested, uint256 available);
 error OnlyModule(address caller);
 error AlreadyWired();
 error SignatureExpired(uint256 deadline);
+error ClaimNotSet();
+error NotClaimHolder(uint256 id, address account);
+error OfferNotActive(uint256 id);
+error PriceMismatch(uint256 id, uint256 offered, uint256 given);
+error ClaimLocked(uint256 id, Status status);
+error ClaimExpired(uint256 id);

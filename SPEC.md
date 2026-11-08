@@ -58,6 +58,7 @@ contracts/
   DeliveryRecord.sol
   QualityRecord.sol
   DisputeManager.sol
+  SettlementClaim.sol
   interfaces/        IParticipantRegistry.sol, IBunkerOrder.sol, IPaymentEscrow.sol, IDisputeManager.sol
   mocks/MockSGD.sol
 scripts/
@@ -66,7 +67,7 @@ scripts/
   scenarios.ts       optional: run the 5 demo scenarios headless (for rehearsal / video)
   export-submission.ts  copy contracts/*.sol -> submission/*.txt, plus config, scripts, tests, README
 test/
-  registry.test.ts  order.test.ts  delivery.test.ts  quality.test.ts  dispute.test.ts  e2e.test.ts
+  claim.test.ts  registry.test.ts  order.test.ts  delivery.test.ts  quality.test.ts  dispute.test.ts  e2e.test.ts
   helpers/fixtures.ts   loadFixture-based deploy + seed
 ui/                  Vite app (§8)
 docs/DECISIONS.md    design choices made during the build
@@ -87,7 +88,7 @@ hardhat.config.ts  package.json  README.md  .gitignore  .env.example
 - Time: `block.timestamp` seconds.
 
 **Roles** (`bytes32`, held in ParticipantRegistry)
-`ADMIN, BANK, BUYER, SUPPLIER, METER_ORACLE, EBDN_ORACLE, LAB, ARBITER`
+`ADMIN, BANK, BUYER, SUPPLIER, METER_ORACLE, EBDN_ORACLE, LAB, ARBITER, FINANCIER` (FINANCIER, stretch: buys settlement claims, §5.9)
 An account can be **suspended**; a suspended account fails every role check.
 
 **Order struct (BunkerOrder)**
@@ -181,9 +182,19 @@ Stores evidence; the comparison logic lives here.
 ### 5.7 MockSGD
 OZ ERC20, 18 decimals, symbol `mSGD`. `mint(to, amount)` restricted to ADMIN. Clearly marked test-only.
 
+### 5.9 SettlementClaim  (stretch: receivable financing)
+ERC-721 (`BSCLAIM`), `tokenId == orderId`, minted to the supplier when `fundOrder` succeeds. The holder receives every payout that used to go to `o.supplier` (first tranche, retention, dispute split). `BunkerOrder.payeeOf(id)` returns the holder. No recourse: a financier who buys the claim carries delivery and quality risk.
+- `mint(orderId, supplier)` / `burn(orderId)` – BunkerOrder only (`OnlyModule`). `cancelExpired` burns the claim.
+- `offer(orderId, price)` – holder; price > 0; claim tradable. `cancelOffer(orderId)` – holder. `getOffer(orderId)`.
+- `buy(orderId, price)` – FINANCIER (`NotAuthorized` / `AccountSuspended`); `price` must equal the offer (`PriceMismatch`); pays the seller in MockSGD and receives the token atomically. Buyer must have approved the claim contract.
+- `payeeOf(orderId)`, `outstanding(orderId)` (nominal value while `Funded`, unpaid retention while `QuantityApproved`, else 0).
+- Tradable = order not paused, status `Funded` or `QuantityApproved` (else `ClaimLocked`), and not past the deadline with no delivery evidence (`ClaimExpired`). Any transfer (including raw `transferFrom`) needs a tradable claim and a FINANCIER receiver; any transfer clears the open offer.
+- A suspended financier who already holds a claim is still paid; they just cannot buy or receive claims.
+- Events: `ClaimOffered, OfferCancelled, ClaimSold` plus ERC-721 `Transfer`. `BunkerOrder` adds `ClaimSet`.
+
 ### 5.8 Wiring at deploy
-1. Registry → MockSGD → Escrow(registry, token) → BunkerOrder(registry, escrow) → DeliveryRecord(registry, order) → QualityRecord(registry, order) → DisputeManager(registry, order, escrow).
-2. `escrow.setOrderContract(order)`, `escrow.setDisputeManager(dispute)`; `order.setModules(delivery, quality, dispute)`. Each setter ADMIN-only and callable **once**.
+1. Registry → MockSGD → Escrow(registry, token) → BunkerOrder(registry, escrow) → SettlementClaim(registry, order, token) → DeliveryRecord(registry, order) → QualityRecord(registry, order) → DisputeManager(registry, order, escrow).
+2. `escrow.setOrderContract(order)`, `escrow.setDisputeManager(dispute)`; `order.setModules(delivery, quality, dispute)`, `order.setClaim(claim)`. Each setter ADMIN-only and callable **once**.
 
 ---
 
@@ -201,6 +212,12 @@ RetentionWindowOpen(uint256 id, uint256 releasableAt)
 InsufficientEscrow(uint256 id, uint256 requested, uint256 available)
 OnlyModule(address caller)
 AlreadyWired()
+ClaimNotSet()
+NotClaimHolder(uint256 id, address account)
+OfferNotActive(uint256 id)
+PriceMismatch(uint256 id, uint256 offered, uint256 given)
+ClaimLocked(uint256 id, Status status)
+ClaimExpired(uint256 id)
 ```
 
 ---
@@ -230,6 +247,13 @@ AlreadyWired()
 - Paused → `createOrder` / `fundOrder` revert.
 - Bad params (qty 0, tolerance > 500 bps, past deadline) → `InvalidParameter` / `DeadlinePassed`.
 
+**Receivable financing** (`test/claim.test.ts`)
+- Claim minted on fund; `setClaim` admin-only, once-only, non-zero; `fundOrder` reverts `ClaimNotSet`; mint/burn only by BunkerOrder.
+- `outstanding` in Funded, QuantityApproved, Settled.
+- offer / cancelOffer / buy happy path; buy reverts (outsider, suspended, no offer, stale offer, `PriceMismatch`, buyer == seller, paused, expired, Disputed, Settled); offer reverts (non-holder, price 0, locked, expired).
+- Transfer rules: raw transfer to a non-financier reverts, financier resale in `QuantityApproved`, locked while `Disputed`, offer cleared on transfer.
+- Payouts reach the holder: lab pass, short delivery, `releaseAfterTimeout`, out-of-tolerance and lab-fail dispute splits, suspended holder still paid; `cancelExpired` burns the claim and refunds the bank.
+
 **Reports**: `npx hardhat coverage` (target ≥ 90% lines, report in `coverage/`); `REPORT_GAS=true npx hardhat test` for the cost section.
 
 ---
@@ -257,7 +281,7 @@ Keep styling plain and readable on a projector (large type, high contrast). Visu
 
 ## 9. Demo scenarios (seed data must support all five)
 
-Accounts (Hardhat defaults): #0 Admin/Operator, #1 Bank ("Harbour Bank"), #2 Buyer ("MV Kirana Shipping"), #3 Supplier ("Lion Bunkers"), #4 Meter oracle, #5 e-BDN provider, #6 Lab, #7 Arbiter, #8 Outsider (unregistered). Names are fictional.
+Accounts (Hardhat defaults): #0 Admin/Operator, #1 Bank ("Harbour Bank"), #2 Buyer ("MV Kirana Shipping"), #3 Supplier ("Lion Bunkers"), #4 Meter oracle, #5 e-BDN provider, #6 Lab, #7 Arbiter, #8 Outsider (unregistered), #9 Financier ("Straits Trade Finance", stretch). Names are fictional.
 
 1. **Normal**: 500 t VLSFO @ 980 mSGD/t, tolerance 50 bps, retention 1000 bps, window 120 s. Meter 500.2 t, eBDN 500.0 t → 90% paid → lab pass → Settled.
 2. **Short delivery**: meter 480 t → dispute OUT_OF_TOLERANCE.

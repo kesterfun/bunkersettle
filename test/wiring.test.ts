@@ -12,6 +12,9 @@ describe("wiring (milestone 2 smoke)", () => {
     expect(await f.order.qualityRecord()).to.equal(await f.quality.getAddress());
     expect(await f.order.disputeManager()).to.equal(await f.dispute.getAddress());
     expect(await f.delivery.order()).to.equal(await f.order.getAddress());
+    expect(await f.order.claim()).to.equal(await f.claim.getAddress());
+    expect(await f.claim.order()).to.equal(await f.order.getAddress());
+    expect(await f.claim.token()).to.equal(await f.token.getAddress());
   });
 
   it("reverts AlreadyWired when a setter is called twice", async () => {

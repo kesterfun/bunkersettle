@@ -119,3 +119,20 @@ Choices made during the build that SPEC.md does not cover.
 - **Proposer of a block** is the block `miner` field, which matches `qbft_getSignerMetrics` (checked on a live chain). The panel reads `miner` from each node's latest block.
 - **Time.** Nothing in the scripts needs time travel on Besu: scenarios use a 2-minute retention window, 7-day delivery deadlines and 15-minute signature deadlines, and no `evm_*` calls. The Fast-forward control stays hidden off chain 31337.
 - **Halt detection** in the UI: no new block on any reachable validator for more than 6 s shows "Halted - needs 3 of 4 validators".
+
+## Stretch – Receivable financing
+
+- **Claim is an ERC-721 minted at `Funded`.** The supplier's right to be paid exists as soon as the bank's money is in escrow, so `fundOrder` mints the token to the supplier. `tokenId == orderId`, which gives one claim per order for free.
+- **No recourse.** The financier buys the right to the escrow payouts and carries the delivery and quality risk. If the order ends in a dispute or the bank is refunded, the financier gets only what the arbiter or the state machine pays out.
+- **Payouts follow ownership, not role.** `BunkerOrder.onDeliveryVerified`, `_settle` and `DisputeManager.resolve` pay `payeeOf(id)` (the holder). A financier who is suspended or revoked after buying is still paid; they just cannot buy or receive more claims.
+- **Resale only to FINANCIERs.** `_update` requires the receiver to hold an active FINANCIER role on every transfer, so a raw `transferFrom` cannot move the claim to an unregistered account. Mint and burn skip the checks (otherwise `cancelExpired` could not burn).
+- **Price-match guard.** `buy(orderId, price)` reverts `PriceMismatch` unless `price` equals the current offer, so a seller cannot raise the price between the buyer signing and the transaction mining.
+- **Atomic swap.** `buy` deletes the offer, pulls the price from the buyer to the seller, then transfers the token, inside `nonReentrant`. Every transfer clears any open offer, so a stale offer cannot survive a move.
+- **Expired claims are frozen.** A `Funded` order past its deadline with no delivery evidence can be cancelled and refunded by anyone, so its claim is worthless; offers and transfers revert `ClaimExpired`. `cancelExpired` burns the token.
+- **Pause is respected.** While `BunkerOrder` is paused, offers, purchases and transfers revert `EnforcedPause`. Payouts are not affected.
+- **Tradable only in `Funded` / `QuantityApproved`.** In every other status the claim is locked (`ClaimLocked`), so nothing moves while the order is `Disputed` or after it is `Settled`, `Resolved` or `Cancelled`.
+- **Evidence stays with buyer, supplier and bank.** A financier cannot submit dispute evidence; the supplier remains the party of record and is expected to argue the case.
+- **Payment token reuse.** The claim contract is given the same MockSGD address; buyers approve the claim contract for the price.
+- **Wiring.** `order.setClaim(claim)` is admin-only and once-only, like `setModules`. `fundOrder` reverts `ClaimNotSet` until it is called. `BunkerOrder.deliveryRecord` is part of `IBunkerOrder` so the claim can check for delivery evidence.
+- **Seed.** Hardhat account #9 is "Straits Trade Finance" (fictional), registered as FINANCIER, with 5,000,000 mSGD and an allowance for the claim contract.
+- **Out of scope.** No dispute deadline, no partial claim sales, no interest or discount calculation on-chain (the seller names the price).

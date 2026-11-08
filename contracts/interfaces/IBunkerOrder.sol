@@ -10,6 +10,10 @@ interface IBunkerOrder {
 
     function heldAmount(uint256 id) external view returns (uint256);
 
+    function payeeOf(uint256 id) external view returns (address);
+
+    function deliveryRecord() external view returns (address);
+
     function onDeliveryVerified(uint256 id, uint256 deliveredKg) external;
 
     function onQuantityMismatch(uint256 id) external;

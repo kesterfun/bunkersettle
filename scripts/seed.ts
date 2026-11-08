@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import type { MockSGD, ParticipantRegistry } from "../typechain-types";
 import { readDeployments } from "./lib/deployments";
 
-type RoleKey = "ADMIN" | "BANK" | "BUYER" | "SUPPLIER" | "METER_ORACLE" | "EBDN_ORACLE" | "LAB" | "ARBITER";
+type RoleKey = "ADMIN" | "BANK" | "BUYER" | "SUPPLIER" | "METER_ORACLE" | "EBDN_ORACLE" | "LAB" | "ARBITER" | "FINANCIER";
 
 /** SPEC 9 participants. Account #8 (Outsider) is intentionally left unregistered. */
 const SEEDS: { index: number; role: RoleKey; name: string }[] = [
@@ -14,9 +14,11 @@ const SEEDS: { index: number; role: RoleKey; name: string }[] = [
   { index: 5, role: "EBDN_ORACLE", name: "e-BDN Provider" },
   { index: 6, role: "LAB", name: "Fuel Lab" },
   { index: 7, role: "ARBITER", name: "Arbiter" },
+  { index: 9, role: "FINANCIER", name: "Straits Trade Finance" },
 ];
 
 const OUTSIDER_INDEX = 8;
+const FINANCIER_INDEX = 9;
 
 /** Bank float available to fund orders; covers all five SPEC 9 scenarios several times over. */
 const BANK_FLOAT = ethers.parseEther("5000000");
@@ -40,6 +42,8 @@ async function main() {
   )) as ParticipantRegistry;
   const token = (await ethers.getContractAt("MockSGD", addr("MockSGD"))) as MockSGD;
   const escrowAddr = addr("PaymentEscrow");
+  const claimAddr = addr("SettlementClaim");
+  const financier = signers[FINANCIER_INDEX];
 
   const roles: Record<RoleKey, string> = {
     ADMIN: await registry.ADMIN(),
@@ -50,6 +54,7 @@ async function main() {
     EBDN_ORACLE: await registry.EBDN_ORACLE(),
     LAB: await registry.LAB(),
     ARBITER: await registry.ARBITER(),
+    FINANCIER: ethers.id("FINANCIER"),
   };
 
   console.log("Registering participants:");
@@ -83,9 +88,26 @@ async function main() {
     console.log("Escrow allowance already sufficient; no approve");
   }
 
+  const financierBalance = await token.balanceOf(financier.address);
+  if (financierBalance < BANK_FLOAT) {
+    const amount = BANK_FLOAT - financierBalance;
+    await (await token.connect(admin).mint(financier.address, amount)).wait();
+    console.log(`Minted ${ethers.formatEther(amount)} mSGD to financier #9`);
+  } else {
+    console.log("Financier float already sufficient; no mint");
+  }
+
+  const financierAllowance = await token.allowance(financier.address, claimAddr);
+  if (financierAllowance < BANK_FLOAT) {
+    await (await token.connect(financier).approve(claimAddr, ethers.MaxUint256)).wait();
+    console.log("Financier approved SettlementClaim for max mSGD");
+  } else {
+    console.log("Claim allowance already sufficient; no approve");
+  }
+
   console.log("\nSummary:");
   console.log(`  ${"Acct".padEnd(6)}${"Name".padEnd(24)}${"Role".padEnd(14)}${"mSGD balance"}`);
-  for (let i = 0; i <= OUTSIDER_INDEX; i++) {
+  for (let i = 0; i <= FINANCIER_INDEX; i++) {
     const account = signers[i].address;
     const seed = SEEDS.find((s) => s.index === i);
     const name = (await registry.nameOf(account)) || "(unregistered)";
@@ -94,6 +116,7 @@ async function main() {
     console.log(`  ${`#${i}`.padEnd(6)}${name.padEnd(24)}${role.padEnd(14)}${balance}`);
   }
   console.log(`\nEscrow: ${escrowAddr}`);
+  console.log(`Claim:  ${claimAddr}`);
 }
 
 main().catch((error) => {
