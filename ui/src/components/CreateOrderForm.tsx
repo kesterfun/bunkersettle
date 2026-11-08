@@ -8,7 +8,7 @@ const FREE = "__free__";
 
 /** Buyer creates an order. Prefilled with SPEC 9 scenario 1. */
 export function CreateOrderForm() {
-  const { participants, send, read, go, uiChecks } = useChain();
+  const { participants, send, read, go } = useChain();
   const now = useChainNow();
   const suppliers = participants.filter((p) => p.roles.includes("SUPPLIER"));
   const banks = participants.filter((p) => p.roles.includes("BANK"));
@@ -91,9 +91,6 @@ export function CreateOrderForm() {
       setBusy(false);
     }
   };
-
-  const blocked =
-    uiChecks && (!ethers.isAddress(supplier) || !ethers.isAddress(bank)) ? "Supplier and bank must be valid addresses." : "";
 
   return (
     <>
@@ -212,10 +209,9 @@ export function CreateOrderForm() {
               </div>
               <small className="cf-note">Payable plus {toleranceBps} bps tolerance.</small>
             </div>
-            <button id="cf-submit" className="btn" disabled={busy || !!blocked} onClick={submit}>
+            <button id="cf-submit" className="btn" disabled={busy} onClick={submit}>
               {busy ? "Creating…" : "Create order"}
             </button>
-            {blocked && <small className="cf-note">{blocked}</small>}
             <small className="cf-note">Signs as Buyer (#2). The contract checks every term.</small>
           </div>
         </aside>

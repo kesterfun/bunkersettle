@@ -1,7 +1,7 @@
 /*
   BunkerSettle "signal board": white ground, thick black rules, signal-flag colours.
   One deliberate light theme so it reads on a projector (SPEC 8). Sizes are in rem so
-  html.projector scales the whole app.
+  the root font size scales the whole app.
 */
 :root {
   color-scheme: light;
@@ -36,10 +36,7 @@
 }
 
 html {
-  font-size: 16px;
-}
-html.projector {
-  font-size: 20px;
+  font-size: 20px; /* sized for a projector */
 }
 
 *,

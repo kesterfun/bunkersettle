@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BunkerSettle Explained</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..900&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Signal board: white paper, thick black rules, maritime signal-flag colours.
+     Layout: one reading column; wide grids for the cast, journey and outcomes. */
+  --paper: #ffffff;
+  --ink: #0d0f12;
+  --muted: #4a5260;
+  --rule: #0d0f12;
+  --wash: #f2f4f7;
+  --flag-red: #c8102e;
+  --flag-yellow: #f2b705;
+  --flag-blue: #0b3d91;
+  --good: #1d7a3a;
+  --font-display: "Archivo", "Arial Narrow", Arial, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { background: var(--paper); }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: var(--font-body); font-size: 18px; line-height: 1.55;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+.prose { max-width: 68ch; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.1; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(36px, 6vw, 60px); font-weight: 850; font-stretch: 90%; letter-spacing: -0.01em; }
+h2 { font-size: clamp(26px, 3.6vw, 36px); font-weight: 800; font-stretch: 92%; }
+h3 { font-size: 20px; font-weight: 750; }
+p { margin: 0; }
+.num { font-variant-numeric: tabular-nums; }
+a { color: var(--flag-blue); }
+
+/* Header band */
+.masthead { border-bottom: 6px solid var(--rule); padding: 18px 0; }
+.masthead .wrap { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.brand { font-family: var(--font-display); font-weight: 850; font-size: 20px; letter-spacing: 0.04em; text-transform: uppercase; }
+.flags { display: inline-flex; gap: 4px; }
+.flag { width: 22px; height: 16px; border: 2px solid var(--ink); display: inline-block; }
+.f-red { background: var(--flag-red); }
+.f-yellow { background: var(--flag-yellow); }
+.f-blue { background: var(--flag-blue); }
+.f-split { background: linear-gradient(90deg, var(--flag-yellow) 50%, var(--flag-blue) 50%); }
+.masthead .tag { margin-left: auto; color: var(--muted); font-size: 15px; }
+
+section { padding: 56px 0; border-bottom: 3px solid var(--rule); }
+section:last-of-type { border-bottom: none; }
+.kicker { font-family: var(--font-display); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; font-size: 14px; color: var(--flag-red); margin-bottom: 10px; }
+.stack { display: flex; flex-direction: column; gap: 18px; }
+
+/* Hero */
+.hero { padding: 48px 0 52px; }
+.hero .lede { font-size: 22px; color: var(--muted); max-width: 60ch; }
+.strip { display: grid; grid-template-columns: repeat(3, 1fr); border: 4px solid var(--rule); margin-top: 28px; }
+.strip > div { padding: 18px 20px; border-right: 4px solid var(--rule); display: flex; flex-direction: column; gap: 6px; }
+.strip > div:last-child { border-right: none; }
+.strip .step { font-family: var(--font-display); font-weight: 850; font-size: 28px; }
+.strip .bar { height: 8px; width: 60px; }
+
+/* Problem */
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+.silos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.silo { border: 3px solid var(--rule); padding: 12px 14px; background: var(--wash); }
+.silo b { display: block; font-family: var(--font-display); }
+.silo span { font-size: 15px; color: var(--muted); }
+.pain { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.pain li { border-left: 8px solid var(--flag-red); padding: 4px 0 4px 14px; }
+
+/* Cast */
+.cast { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.role { border: 3px solid var(--rule); padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.role .who { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; color: var(--muted); }
+.role .chip { width: 30px; height: 10px; border: 2px solid var(--ink); }
+.role p { font-size: 16px; }
+.note { font-size: 15px; color: var(--muted); }
+
+/* Journey */
+.journey { display: flex; flex-direction: column; border: 4px solid var(--rule); }
+.jrow { display: grid; grid-template-columns: 56px 1.3fr 1.6fr; gap: 0; border-bottom: 2px solid var(--rule); }
+.jrow:last-child { border-bottom: none; }
+.jrow > * { padding: 14px 16px; }
+.jno { font-family: var(--font-display); font-weight: 850; font-size: 26px; border-right: 2px solid var(--rule); text-align: center; }
+.jwhat h3 { margin-bottom: 4px; }
+.jwhat p { font-size: 16px; color: var(--muted); }
+.jmoney { border-left: 2px solid var(--rule); display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+.meter { display: flex; height: 22px; border: 2px solid var(--ink); background: var(--paper); }
+.meter > span { display: block; height: 100%; }
+.m-sup { background: var(--good); }
+.m-held { background: var(--flag-yellow); }
+.m-bank { background: var(--flag-blue); }
+.m-dispute { background: repeating-linear-gradient(45deg, var(--flag-red) 0 6px, #e34a60 6px 12px); }
+.mtext { font-size: 15px; }
+.legend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 15px; margin-top: 12px; }
+.legend i { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--ink); vertical-align: -2px; margin-right: 6px; }
+
+/* Outcomes */
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 16px; }
+.tabs button {
+  font: inherit; font-family: var(--font-display); font-weight: 700; font-size: 16px;
+  border: 3px solid var(--rule); background: var(--paper); color: var(--ink);
+  padding: 8px 14px; cursor: pointer;
+}
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+.tabs button:focus-visible, .tabs button:hover { outline: 3px solid var(--flag-blue); outline-offset: 2px; }
+.panel { border: 4px solid var(--rule); display: grid; grid-template-columns: 1.2fr 1fr; }
+.panel > div { padding: 20px; }
+.panel .side { border-left: 4px solid var(--rule); background: var(--wash); display: flex; flex-direction: column; gap: 12px; }
+.panel ol { margin: 10px 0 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; }
+.verdict { font-family: var(--font-display); font-weight: 800; font-size: 22px; display: inline-flex; align-items: center; gap: 10px; }
+.stamp { border: 3px solid currentColor; padding: 2px 8px; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; }
+.ok { color: var(--good); }
+.bad { color: var(--flag-red); }
+.blocked { color: var(--muted); }
+.moneyline { display: flex; justify-content: space-between; gap: 12px; font-size: 16px; border-bottom: 1px solid #c9ced6; padding-bottom: 4px; }
+
+.table-wrap { overflow-x: auto; margin-top: 28px; border: 4px solid var(--rule); }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 16px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--rule); vertical-align: top; }
+th { font-family: var(--font-display); background: var(--ink); color: var(--paper); font-weight: 700; }
+tr:last-child td { border-bottom: none; }
+td.num { white-space: nowrap; }
+
+/* Shared record */
+.compare { display: grid; grid-template-columns: 1fr 1fr 1fr; border: 4px solid var(--rule); }
+.compare > div { padding: 12px 14px; border-bottom: 2px solid var(--rule); font-size: 16px; }
+.compare > div:nth-child(3n+2) { border-left: 2px solid var(--rule); border-right: 2px solid var(--rule); }
+.compare .head { font-family: var(--font-display); font-weight: 800; background: var(--ink); color: var(--paper); }
+.compare .lbl { font-weight: 700; }
+.compare > div:nth-last-child(-n+3) { border-bottom: none; }
+
+/* Documents */
+.docs { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.doc { border: 3px solid var(--rule); padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+.doc code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; background: var(--wash); padding: 2px 6px; align-self: flex-start; word-break: break-all; }
+.doc .abbr { font-family: var(--font-display); font-weight: 850; font-size: 22px; }
+.doc p { font-size: 15px; color: var(--muted); }
+
+/* Glossary */
+dl { display: grid; grid-template-columns: 180px 1fr; gap: 0; margin: 0; border-top: 3px solid var(--rule); }
+dt, dd { padding: 12px 0; border-bottom: 1px solid #c9ced6; margin: 0; }
+dt { font-family: var(--font-display); font-weight: 800; }
+footer { padding: 28px 0 48px; color: var(--muted); font-size: 15px; }
+
+/* Figures */
+figure { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+figure svg { width: 100%; height: auto; display: block; }
+.diagram { overflow-x: auto; border: 4px solid var(--rule); padding: 12px; }
+.diagram svg { min-width: 760px; }
+.chart { border: 4px solid var(--rule); padding: 16px; max-width: 720px; }
+figcaption { font-size: 15px; color: var(--muted); }
+sup { font-size: 11px; color: var(--flag-blue); font-weight: 700; }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.stat { border: 3px solid var(--rule); border-top: 10px solid var(--flag-blue); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; font-size: 16px; }
+.stat.warn { border-top-color: var(--flag-red); }
+.stat .big { font-family: var(--font-display); font-weight: 850; font-size: 30px; line-height: 1.1; }
+.gain { font-weight: 700; color: var(--good); font-size: 15px; border-top: 2px solid var(--rule); padding-top: 8px; margin-top: auto; }
+.cons { display: grid; grid-template-columns: repeat(4, 1fr); border: 4px solid var(--rule); }
+.cstep { padding: 14px 16px; border-right: 2px solid var(--rule); display: flex; flex-direction: column; gap: 4px; font-size: 16px; }
+.cstep:last-child { border-right: none; }
+.cstep span:last-child { color: var(--muted); font-size: 15px; }
+.cno { font-family: var(--font-display); font-weight: 850; font-size: 26px; }
+.tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tier { border: 3px solid var(--rule); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
+.t-val { border-left: 12px solid var(--flag-red); }
+.t-mem { border-left: 12px solid var(--flag-yellow); }
+.t-send { border-left: 12px solid var(--flag-blue); }
+.srcs { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; max-width: 90ch; }
+
+/* Technical documentation */
+.part { background: var(--ink); color: var(--paper); padding: 40px 0; border-bottom: 6px solid var(--flag-yellow); }
+.part .kicker { color: var(--flag-yellow); }
+.part p { color: #c9ced6; max-width: 68ch; }
+.toc { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 6px 0 0; }
+.toc a { display: inline-block; color: var(--paper); border: 2px solid var(--paper); padding: 4px 10px; font-family: var(--font-display); font-weight: 700; font-size: 15px; text-decoration: none; }
+.toc a:hover, .toc a:focus-visible { background: var(--flag-yellow); color: var(--ink); border-color: var(--flag-yellow); outline: none; }
+code, .mono { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.86em; }
+p code, li code, td code { background: var(--wash); padding: 1px 5px; }
+.contracts { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.ct { border: 3px solid var(--rule); display: flex; flex-direction: column; min-width: 0; }
+.ct header { padding: 12px 16px; border-bottom: 3px solid var(--rule); display: flex; flex-direction: column; gap: 4px; }
+.ct header .mono { font-size: 13px; color: var(--muted); }
+.ct.core header { background: var(--flag-yellow); }
+.ct .body { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; font-size: 15px; }
+.fns { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fns li { display: flex; flex-direction: column; gap: 1px; border-left: 4px solid var(--flag-blue); padding-left: 10px; }
+.fns li code { background: none; padding: 0; font-weight: 700; word-break: break-word; }
+.fns li span { color: var(--muted); }
+.lbl2 { font-family: var(--font-display); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.evs { font-size: 13px; color: var(--muted); line-height: 1.45; }
+.st { display: inline-block; font-family: var(--font-display); font-weight: 700; font-size: 14px; border: 2px solid var(--ink); padding: 0 6px; white-space: nowrap; }
+.st.g { background: #dff0e4; } .st.r { background: #f8dde1; } .st.y { background: #fdf0c4; }
+pre.cmd { margin: 0; background: var(--ink); color: var(--paper); padding: 14px 16px; overflow-x: auto; font-size: 14px; line-height: 1.6; border: 3px solid var(--rule); }
+pre.cmd .c { color: #9aa3b0; }
+.cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.cols2 > * { min-width: 0; }
+
+@media (max-width: 760px) {
+  .cols2 { grid-template-columns: 1fr; }
+  .cons, .tiers { grid-template-columns: 1fr; }
+  .cstep { border-right: none; border-bottom: 2px solid var(--rule); }
+  .cstep:last-child { border-bottom: none; }
+  .two, .panel { grid-template-columns: 1fr; }
+  .panel .side { border-left: none; border-top: 4px solid var(--rule); }
+  .strip { grid-template-columns: 1fr; }
+  .strip > div { border-right: none; border-bottom: 4px solid var(--rule); }
+  .strip > div:last-child { border-bottom: none; }
+  .jrow { grid-template-columns: 44px 1fr; }
+  .jmoney { grid-column: 1 / -1; border-left: none; border-top: 2px solid var(--rule); }
+  .compare { grid-template-columns: 1fr; }
+  .compare > div:nth-child(3n+2) { border-left: none; border-right: none; }
+  .compare .head:not(:first-child) { display: none; }
+  dl { grid-template-columns: 1fr; }
+  dt { border-bottom: none; padding-bottom: 0; }
+  .silos { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .meter > span { transition: width 400ms ease; }
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <span class="flags" aria-hidden="true"><span class="flag f-red"></span><span class="flag f-yellow"></span><span class="flag f-blue"></span><span class="flag f-split"></span></span>
+    <span class="brand">BunkerSettle</span>
+    <span class="tag">IS452 Assignment 2 · plain-language guide · <a href="#tech">technical documentation</a></span>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <div class="wrap stack">
+    <div class="kicker">The idea in one line</div>
+    <h1>Ship fuel gets paid for only when the delivery and the quality check out.</h1>
+    <p class="lede">BunkerSettle is a shared record for the firms involved in refuelling ships in Singapore. The bank's money waits in a locked account, and it is paid out automatically once independent measurements agree. If they don't, a dispute opens by itself and the money stays put.</p>
+    <div class="strip">
+      <div><span class="bar f-blue"></span><span class="step">1. Agree</span><span>Buyer and fuel supplier sign the order. The bank locks the money.</span></div>
+      <div><span class="bar f-yellow"></span><span class="step">2. Deliver &amp; check</span><span>A flow meter and the delivery note both report how much fuel went in.</span></div>
+      <div><span class="bar f-red"></span><span class="step">3. Pay</span><span>90% is paid at once. The last 10% waits for the lab's quality test.</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="problem">
+  <div class="wrap two">
+    <div class="stack prose">
+      <div class="kicker">The business problem</div>
+      <h2>Refuelling a ship involves many firms, and each keeps its own records</h2>
+      <p><b>Bunkering</b> is the industry word for refuelling ships. Singapore is the world's busiest bunkering port. A tanker barge comes alongside a ship at anchor and pumps hundreds of tonnes of fuel across.</p>
+      <p>The facts of one delivery end up in different places. The meter reading sits with the barge. The delivery note sits with the e-BDN platform. The lab report arrives days later. Payment runs through the bank. Nobody sees one complete picture.</p>
+    </div>
+    <div class="stack">
+      <div class="silos" aria-label="Separate records today">
+        <div class="silo"><b>Meter reading</b><span>held by the supplier's barge</span></div>
+        <div class="silo"><b>Delivery note</b><span>held by the e-BDN platform</span></div>
+        <div class="silo"><b>Lab report</b><span>held by the testing lab</span></div>
+        <div class="silo"><b>Payment</b><span>held by the bank</span></div>
+      </div>
+      <ul class="pain">
+        <li><b>Quantity arguments.</b> The ship says it got less fuel than it paid for. The supplier disagrees.</li>
+        <li><b>Quality arguments.</b> Off-spec fuel can damage engines, and the test result comes after the money has gone.</li>
+        <li><b>Slow, manual payment.</b> Someone has to collect and compare every document before paying.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="numbers">
+  <div class="wrap stack">
+    <div class="kicker">The size of it</div>
+    <h2>Singapore sells more ship fuel than any other port</h2>
+    <div class="stats">
+      <div class="stat"><span class="big num">56.8 Mt</span><span>fuel sold in Singapore in 2025, a record <sup>1</sup></span></div>
+      <div class="stat"><span class="big num">≈4.7 Mt</span><span>sold in an average month <sup>1</sup></span></div>
+      <div class="stat"><span class="big num">≈US$29 bn</span><span>a year at about US$500 per tonne, our estimate <sup>1,2</sup></span></div>
+      <div class="stat"><span class="big num">≈US$2.4 bn</span><span>changing hands every month, our estimate <sup>1,2</sup></span></div>
+      <div class="stat"><span class="big num">42,603</span><span>ship calls for fuel in 2025, about 3,500 a month <sup>3</sup></span></div>
+      <div class="stat"><span class="big num">1 in 6</span><span>tonnes of the world's ship fuel is sold here <sup>4</sup></span></div>
+      <div class="stat"><span class="big num">39</span><span>licensed fuel suppliers in the port <sup>5</sup></span></div>
+      <div class="stat"><span class="big num">30 days</span><span>usual wait for the supplier to be paid after delivery <sup>6</sup></span></div>
+    </div>
+    <figure class="chart">
+      <svg viewBox="0 0 640 260" role="img" aria-label="Singapore bunker sales rose from 47.5 million tonnes in 2019 to a record 56.8 million tonnes in 2025.">
+        <g font-family="Source Sans 3, Segoe UI, Arial, sans-serif" font-size="13" fill="#4a5260">
+          <g stroke="#c9ced6" stroke-width="1">
+            <line x1="50" y1="40" x2="630" y2="40"/><line x1="50" y1="100" x2="630" y2="100"/><line x1="50" y1="160" x2="630" y2="160"/>
+          </g>
+          <line x1="50" y1="220" x2="630" y2="220" stroke="#0d0f12" stroke-width="2"/>
+          <g text-anchor="end"><text x="42" y="44">60</text><text x="42" y="104">40</text><text x="42" y="164">20</text><text x="42" y="224">0</text></g>
+          <text x="8" y="24" fill="#0d0f12" font-weight="700">Million tonnes per year</text>
+          <g fill="#0b3d91">
+            <rect x="65" y="70.6" width="50" height="149.4"/><rect x="137" y="77.5" width="50" height="142.5"/><rect x="209" y="70.6" width="50" height="149.4"/><rect x="281" y="70" width="50" height="150"/><rect x="353" y="76.3" width="50" height="143.7"/><rect x="425" y="64.6" width="50" height="155.4"/><rect x="497" y="55.3" width="50" height="164.7"/>
+          </g>
+          <rect x="569" y="49.6" width="50" height="170.4" fill="#c8102e"/>
+          <g text-anchor="middle" fill="#0d0f12" class="num">
+            <text x="90" y="64">49.8</text><text x="162" y="71">47.5</text><text x="234" y="64">49.8</text><text x="306" y="64">50.0</text><text x="378" y="70">47.9</text><text x="450" y="58">51.8</text><text x="522" y="49">54.9</text><text x="594" y="43" font-weight="700">56.8</text>
+          </g>
+          <g text-anchor="middle"><text x="90" y="240">2018</text><text x="162" y="240">2019</text><text x="234" y="240">2020</text><text x="306" y="240">2021</text><text x="378" y="240">2022</text><text x="450" y="240">2023</text><text x="522" y="240">2024</text><text x="594" y="240">2025</text></g>
+        </g>
+      </svg>
+      <figcaption>Annual bunker sales in Singapore, all fuel types. Source: MPA monthly bunker sales on data.gov.sg <sup>1</sup>, the same data the BunkerSettle app charts.</figcaption>
+    </figure>
+
+    <h3>What goes wrong today, in numbers</h3>
+    <div class="stats">
+      <div class="stat warn"><span class="big num">1.6%</span><span>of deliveries end in a quantity dispute, averaging US$27,790 each <sup>7</sup></span></div>
+      <div class="stat warn"><span class="big num">1.0%</span><span>end in a quality dispute, averaging US$54,009 each <sup>7</sup></span></div>
+      <div class="stat warn"><span class="big num">≈US$40 m</span><span>a year if those rates applied to Singapore's 42,603 calls, our illustration <sup>3,7</sup></span></div>
+      <div class="stat warn"><span class="big num">≈200 ships</span><span>got contaminated fuel in Singapore in 2022; about 80 had engine or pump trouble <sup>8</sup></span></div>
+    </div>
+    <p class="note prose">Singapore already made two big moves: mass flow meters on every fuel barge (fuel oil from 2017) and mandatory electronic delivery notes from 1 April 2025, which MPA expects to save the industry about 40,000 working days a year <sup>9</sup>. BunkerSettle builds on both by linking those digital records to the payment itself.</p>
+  </div>
+</section>
+
+<section id="cast">
+  <div class="wrap stack">
+    <div class="kicker">Who is involved</div>
+    <h2>Eight parties, each with one job</h2>
+    <p class="prose">Every party is registered in advance and given a role. The system checks the role before accepting anything. The company names are made up for the demo.</p>
+    <div class="cast">
+      <div class="role"><span class="chip f-blue"></span><span class="who">Buyer</span><h3>MV Kirana Shipping</h3><p>The ship operator. Places the order: fuel type, amount, price, where to deliver.</p></div>
+      <div class="role"><span class="chip f-yellow"></span><span class="who">Fuel supplier</span><h3>Lion Bunkers</h3><p>Accepts the order and delivers the fuel by barge. Gets paid as the checks pass.</p></div>
+      <div class="role"><span class="chip f-split"></span><span class="who">Bank</span><h3>Harbour Bank</h3><p>Puts the money into the locked account up front, and gets back anything not owed.</p></div>
+      <div class="role"><span class="chip f-red"></span><span class="who">Measurement source</span><h3>Flow meter</h3><p>Reports how much fuel actually passed through the barge's meter.</p></div>
+      <div class="role"><span class="chip f-red"></span><span class="who">Measurement source</span><h3>e-BDN provider</h3><p>Reports the amount on the official electronic delivery note.</p></div>
+      <div class="role"><span class="chip f-red"></span><span class="who">Measurement source</span><h3>Testing lab</h3><p>Tests a fuel sample and reports pass or fail.</p></div>
+      <div class="role"><span class="chip" style="background:var(--ink)"></span><span class="who">Arbiter</span><h3>Independent referee</h3><p>Steps in only when there is a dispute, and decides how the held money is split.</p></div>
+      <div class="role"><span class="chip" style="background:var(--wash)"></span><span class="who">Operator</span><h3>Network admin</h3><p>Registers firms, can suspend a misbehaving one, and can pause new orders in an emergency.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="journey">
+  <div class="wrap stack">
+    <div class="kicker">A normal delivery, step by step</div>
+    <h2>Following the money for 500 tonnes of fuel</h2>
+    <p class="prose">The order: 500 tonnes of VLSFO (a low-sulphur ship fuel) at 980 per tonne, so 490,000 in total. Amounts are in mSGD, a test token that stands in for Singapore dollars.</p>
+    <div class="journey" aria-label="Normal delivery steps">
+      <div class="jrow">
+        <div class="jno">1</div>
+        <div class="jwhat"><h3>Buyer places the order</h3><p>Allows up to 0.5% more or less fuel than ordered. Holds back 10% until the quality test.</p></div>
+        <div class="jmoney"><div class="mtext">No money has moved yet.</div></div>
+      </div>
+      <div class="jrow">
+        <div class="jno">2</div>
+        <div class="jwhat"><h3>Supplier accepts</h3><p>Both sides are now committed to the same terms on the shared record.</p></div>
+        <div class="jmoney"><div class="mtext">No money has moved yet.</div></div>
+      </div>
+      <div class="jrow">
+        <div class="jno">3</div>
+        <div class="jwhat"><h3>Bank locks the money</h3><p>It deposits the price plus 0.5%, enough to cover a slightly larger delivery.</p></div>
+        <div class="jmoney">
+          <div class="meter" role="img" aria-label="All 492,450 held"><span class="m-held" style="width:100%"></span></div>
+          <div class="mtext num"><b>492,450</b> locked</div>
+        </div>
+      </div>
+      <div class="jrow">
+        <div class="jno">4</div>
+        <div class="jwhat"><h3>Fuel is delivered and measured</h3><p>Meter says 500.2 t. Delivery note says 500.0 t. They agree within 0.5%, so the meter figure counts. Bill: 490,196.</p></div>
+        <div class="jmoney">
+          <div class="meter" role="img" aria-label="441,176.40 paid to supplier, 51,273.60 still held"><span class="m-sup" style="width:89.59%"></span><span class="m-held" style="width:10.41%"></span></div>
+          <div class="mtext num"><b>441,176.40</b> (90% of the bill) paid to the supplier at once</div>
+        </div>
+      </div>
+      <div class="jrow">
+        <div class="jno">5</div>
+        <div class="jwhat"><h3>Lab passes the fuel</h3><p>The held 10% goes to the supplier. The unused cushion goes back to the bank. The order is settled.</p></div>
+        <div class="jmoney">
+          <div class="meter" role="img" aria-label="490,196 to supplier, 2,254 back to bank"><span class="m-sup" style="width:99.54%"></span><span class="m-bank" style="width:0.46%"></span></div>
+          <div class="mtext num">Supplier <b>490,196</b> in total · Bank refunded <b>2,254</b></div>
+        </div>
+      </div>
+    </div>
+    <div class="legend" aria-hidden="true"><span><i class="m-sup"></i>Paid to supplier</span><span><i class="m-held"></i>Still locked</span><span><i class="m-bank"></i>Returned to bank</span><span><i class="m-dispute"></i>Frozen in a dispute</span></div>
+    <p class="note">Each bar is the full 492,450 the bank locked. If the lab never reports, the held 10% is released to the supplier once a waiting period ends: 14 days in real use, 2 minutes in the classroom demo.</p>
+  </div>
+</section>
+
+<section id="outcomes">
+  <div class="wrap stack">
+    <div class="kicker">What if something goes wrong?</div>
+    <h2>The rules react the same way every time</h2>
+    <p class="prose">Pick a situation to see what the system does. The table below lists them all.</p>
+    <div class="tabs" role="tablist" aria-label="Scenarios" id="tabs"></div>
+    <div class="panel" role="tabpanel" id="panel" aria-live="polite"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Situation</th><th>What the system sees</th><th>What happens</th><th>Where the money is</th></tr></thead>
+        <tbody>
+          <tr><td><b>Normal delivery</b></td><td>Meter 500.2 t, note 500.0 t, lab pass</td><td class="ok">Settled automatically</td><td class="num">Supplier 490,196 · Bank 2,254 back</td></tr>
+          <tr><td><b>Short delivery</b></td><td>Only 480 t delivered, limit is 497.5 t</td><td class="bad">Dispute opens by itself</td><td class="num">All 492,450 frozen</td></tr>
+          <tr><td><b>Records disagree</b></td><td>Meter 500 t, delivery note 490 t</td><td class="bad">Dispute opens by itself</td><td class="num">All 492,450 frozen</td></tr>
+          <tr><td><b>Bad fuel</b></td><td>Quantity fine, lab fails the sample</td><td class="bad">Dispute opens by itself</td><td class="num">Supplier has 90%; 51,273.60 frozen</td></tr>
+          <tr><td><b>Outsider tries to cheat</b></td><td>Unregistered account sends a meter reading</td><td class="blocked">Rejected on the spot</td><td class="num">Nothing changes</td></tr>
+          <tr><td><b>Arbiter rules 70 / 30</b></td><td>Referee decides on the short delivery</td><td class="ok">Dispute resolved</td><td class="num">Supplier 344,715 · Bank 147,735</td></tr>
+          <tr><td><b>No delivery by deadline</b></td><td>Deadline passes with no readings</td><td class="ok">Order cancelled</td><td class="num">Bank gets all 492,450 back</td></tr>
+          <tr><td><b>Lab stays silent</b></td><td>No result after the waiting period</td><td class="ok">Settled as if passed</td><td class="num">Supplier gets the held 10%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="side-by-side">
+  <div class="wrap stack">
+    <div class="kicker">Side by side</div>
+    <h2>Today every document travels separately. With BunkerSettle they all meet in one place.</h2>
+    <figure class="diagram">
+      <svg viewBox="0 0 1050 500" role="img" aria-label="Today, meter tickets, delivery notes, lab reports, invoices and payments pass between firms by email and are matched by hand, with payment weeks later. With BunkerSettle, every report goes to one shared record that holds the locked money, checks the rules, pays the supplier and opens disputes automatically.">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0d0f12"/></marker>
+          <marker id="ahr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c8102e"/></marker>
+        </defs>
+        <g font-family="Source Sans 3, Segoe UI, Arial, sans-serif" font-size="13" fill="#0d0f12">
+          <!-- divider -->
+          <line x1="525" y1="10" x2="525" y2="490" stroke="#0d0f12" stroke-width="4"/>
+          <text x="20" y="36" font-family="Archivo, Arial, sans-serif" font-weight="800" font-size="22">TODAY</text>
+          <text x="545" y="36" font-family="Archivo, Arial, sans-serif" font-weight="800" font-size="22">WITH BUNKERSETTLE</text>
+
+          <!-- LEFT: today -->
+          <g stroke="#0d0f12" stroke-width="2.5" fill="#f2f4f7">
+            <rect x="20" y="70" width="120" height="44"/><rect x="190" y="70" width="120" height="44"/><rect x="360" y="70" width="120" height="44"/>
+            <rect x="20" y="230" width="120" height="44"/><rect x="360" y="230" width="120" height="44"/>
+            <rect x="190" y="390" width="120" height="44"/>
+          </g>
+          <g font-weight="700" text-anchor="middle" font-size="14">
+            <text x="80" y="97">Flow meter</text><text x="250" y="97">e-BDN</text><text x="420" y="97">Lab</text>
+            <text x="80" y="257">Supplier</text><text x="420" y="257">Buyer</text><text x="250" y="417">Bank</text>
+          </g>
+          <g stroke="#0d0f12" stroke-width="2" stroke-dasharray="6 5" fill="none" marker-end="url(#ah)">
+            <line x1="80" y1="114" x2="80" y2="226"/>
+            <line x1="245" y1="114" x2="105" y2="226"/>
+            <line x1="255" y1="114" x2="395" y2="226"/>
+            <line x1="420" y1="114" x2="420" y2="226"/>
+            <line x1="140" y1="252" x2="356" y2="252"/>
+            <line x1="410" y1="274" x2="312" y2="388"/>
+            <line x1="190" y1="400" x2="92" y2="278"/>
+          </g>
+          <text x="88" y="172">ticket</text>
+          <text x="250" y="168" text-anchor="middle">delivery note</text>
+          <text x="428" y="166">report,</text><text x="428" y="182" fill="#c8102e" font-weight="700">days later</text>
+          <text x="250" y="244" text-anchor="middle">invoice</text>
+          <text x="372" y="345">pay request</text>
+          <text x="126" y="346" text-anchor="end">payment,</text><text x="126" y="362" text-anchor="end" fill="#c8102e" font-weight="700">weeks later</text>
+          <text x="250" y="312" text-anchor="middle" fill="#c8102e" font-weight="700">Staff match four documents by hand</text>
+          <text x="250" y="474" text-anchor="middle" fill="#c8102e" font-weight="700">Disputes: emails, calls, surveyors, lawyers</text>
+
+          <!-- RIGHT: BunkerSettle -->
+          <g stroke="#0d0f12" stroke-width="2.5" fill="#f2f4f7">
+            <rect x="560" y="70" width="120" height="44"/><rect x="730" y="70" width="120" height="44"/><rect x="900" y="70" width="120" height="44"/>
+            <rect x="545" y="228" width="100" height="44"/><rect x="935" y="228" width="100" height="44"/>
+            <rect x="640" y="390" width="120" height="44"/><rect x="820" y="390" width="120" height="44"/>
+          </g>
+          <rect x="710" y="200" width="160" height="100" fill="#f2b705" stroke="#0d0f12" stroke-width="4"/>
+          <g font-weight="700" text-anchor="middle" font-size="14">
+            <text x="620" y="97">Flow meter</text><text x="790" y="97">e-BDN</text><text x="960" y="97">Lab</text>
+            <text x="595" y="255">Buyer</text><text x="985" y="255">Supplier</text>
+            <text x="700" y="417">Bank</text><text x="880" y="417">Arbiter</text>
+            <text x="790" y="232" font-size="16">Shared record</text>
+          </g>
+          <text x="790" y="254" text-anchor="middle">+ locked account</text>
+          <text x="790" y="276" text-anchor="middle" font-size="12">rules check every entry</text>
+          <g stroke="#0d0f12" stroke-width="2.5" fill="none" marker-end="url(#ah)">
+            <line x1="620" y1="114" x2="733" y2="196"/>
+            <line x1="790" y1="114" x2="790" y2="196"/>
+            <line x1="960" y1="114" x2="847" y2="196"/>
+            <line x1="645" y1="250" x2="706" y2="250"/>
+            <line x1="870" y1="250" x2="931" y2="250"/>
+            <line x1="705" y1="388" x2="745" y2="304" marker-start="url(#ah)"/>
+          </g>
+          <line x1="835" y1="302" x2="868" y2="384" stroke="#c8102e" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#ahr)"/>
+          <text x="668" y="160" text-anchor="end">reading</text>
+          <text x="798" y="160">note</text>
+          <text x="912" y="160">pass / fail</text>
+          <text x="676" y="242" text-anchor="middle" font-size="12">order</text>
+          <text x="985" y="292" text-anchor="middle" fill="#1d7a3a" font-weight="700">90% at once</text>
+          <text x="985" y="308" text-anchor="middle" fill="#1d7a3a" font-weight="700">10% after lab</text>
+          <text x="712" y="344" text-anchor="end">locks money</text><text x="712" y="360" text-anchor="end">gets unused back</text>
+          <text x="862" y="344" fill="#c8102e">dispute opens</text><text x="862" y="360" fill="#c8102e">by itself</text>
+          <text x="790" y="474" text-anchor="middle" fill="#1d7a3a" font-weight="700">No hand matching · paid minutes after the checks pass</text>
+        </g>
+      </svg>
+      <figcaption>Dashed lines are documents sent by email or PDF. Solid lines are entries written to the shared record, which every member firm can see and check.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="benefits">
+  <div class="wrap stack">
+    <div class="kicker">What's in it for each party</div>
+    <h2>Every firm gives up a little paperwork and gets something it values</h2>
+    <div class="cast">
+      <div class="role"><span class="chip f-blue"></span><span class="who">Buyer</span><h3>Pays only for fuel that is proven</h3><p>Money is frozen automatically on a short delivery, and 10% stays back until the lab passes the fuel. No chasing refunds after the money has gone.</p><p class="gain num">Protects against disputes averaging US$27,790 to US$54,009 <sup>7</sup></p></div>
+      <div class="role"><span class="chip f-yellow"></span><span class="who">Fuel supplier</span><h3>Paid in minutes</h3><p>90% arrives as soon as the readings agree, from money locked before the barge sets off. No unpaid invoices, and the last 10% can't be held back forever.</p><p class="gain num">About 30 days of waiting becomes minutes <sup>6</sup></p></div>
+      <div class="role"><span class="chip f-split"></span><span class="who">Bank</span><h3>Lends against evidence</h3><p>Money leaves only when the rules allow. Anything unused comes back by itself. Total exposure is visible at any time, which makes the risk cheaper to price.</p><p class="gain num">Retention exposure ≈ 10% of the bill for up to 14 days</p></div>
+      <div class="role"><span class="chip f-red"></span><span class="who">Meter, e-BDN provider, lab</span><h3>Their data counts at once</h3><p>A report now triggers payment directly, which makes the data more valuable. Each report is filed once and fingerprinted, so it can't be disputed later.</p><p class="gain">One submission per order, locked in</p></div>
+      <div class="role"><span class="chip" style="background:var(--ink)"></span><span class="who">Arbiter</span><h3>A ready-made case file</h3><p>Both readings, the lab result and every piece of evidence are already in one place. The ruling is paid out in the same step, so nobody has to be chased.</p><p class="gain">Decision and payout in one action</p></div>
+      <div class="role"><span class="chip" style="background:var(--wash)"></span><span class="who">The port</span><h3>A more trusted hub</h3><p>Faster settlement and fewer disputes make Singapore more attractive for ship operators. It extends MPA's e-BDN system rather than replacing it.</p><p class="gain num">Builds on the 1 April 2025 e-BDN mandate <sup>9</sup></p></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="big num">≈US$2.4 bn</span><span>owed to suppliers at any moment under 30-day terms, our estimate</span></div>
+      <div class="stat"><span class="big num">≈US$0.1 bn</span><span>still held at any moment if 90% is paid on delivery and 10% waits up to 14 days</span></div>
+    </div>
+    <p class="note prose">The two figures above are rough illustrations from the monthly sales value, showing how much cash the industry would free up. The costs are real too: every firm must connect its systems, the bank ties up the money from order to delivery, and members must agree who acts as arbiter and network operator.</p>
+  </div>
+</section>
+
+<section id="shared-record">
+  <div class="wrap stack">
+    <div class="kicker">Why a blockchain</div>
+    <h2>One shared record that no single firm controls</h2>
+    <p class="prose">A blockchain here is a record book that every member firm keeps an identical copy of. New entries are added only when they follow the agreed rules, and old entries can't be quietly edited. This is a private network: only registered, known firms take part, and the public can't join.</p>
+    <div class="compare">
+      <div class="head">&nbsp;</div><div class="head">Today</div><div class="head">With BunkerSettle</div>
+      <div class="lbl">Who keeps the record</div><div>Each firm keeps its own</div><div>All firms share one copy</div>
+      <div class="lbl">Who can change it</div><div>Whoever holds the file</div><div>Nobody, once it is written</div>
+      <div class="lbl">Who compares documents</div><div>Staff, by hand</div><div>The rules, automatically</div>
+      <div class="lbl">When the supplier is paid</div><div>After paperwork is chased</div><div>Minutes after the checks pass</div>
+      <div class="lbl">When something is wrong</div><div>Emails and phone calls</div><div>A dispute opens and money freezes</div>
+    </div>
+  </div>
+</section>
+
+<section id="consensus">
+  <div class="wrap stack">
+    <div class="kicker">How the firms agree on the record</div>
+    <h2>A few trusted firms approve each page of the record. Labs don't have to.</h2>
+    <p class="prose">The network is designed to run on Hyperledger Besu using a method called <b>QBFT</b>, short for "Quorum Byzantine Fault Tolerance". A small group of member firms run <b>validator</b> computers. Every few seconds one of them proposes the next page (block) of new entries, and the page is final as soon as more than two-thirds of the validators sign it. There's no mining and no energy race, and a final page is never undone.</p>
+    <div class="cons">
+      <div class="cstep"><span class="cno">1</span><b>Someone submits an entry</b><span>e.g. the lab files "pass", signed with its own key</span></div>
+      <div class="cstep"><span class="cno">2</span><b>A validator proposes a page</b><span>Validators take turns, so no single firm always decides</span></div>
+      <div class="cstep"><span class="cno">3</span><b>Each validator re-checks it</b><span>Every validator re-runs the rules and rejects any entry that breaks them</span></div>
+      <div class="cstep"><span class="cno">4</span><b>Over ⅔ sign, and it's final</b><span>With 4 validators the network keeps going even if 1 fails or misbehaves</span></div>
+    </div>
+    <div class="tiers">
+      <div class="tier t-val"><h3>Validators</h3><p>Approve pages. Run by a few neutral, well-resourced members, for example the network operator, two banks and an industry body.</p><p class="note">Suggested set of 4. Tolerates 1 faulty.</p></div>
+      <div class="tier t-mem"><h3>Member copies</h3><p>Buyers and suppliers can keep a full copy and check every page themselves, without voting.</p><p class="note">Optional. Adds independent checking.</p></div>
+      <div class="tier t-send"><h3>Entry senders</h3><p>Flow meter, e-BDN provider and labs only send signed reports. They are trusted because of their registered role, not because they vote.</p><p class="note">No servers to run. No part in consensus.</p></div>
+    </div>
+    <p class="prose"><b>So do labs need to take part in consensus?</b> No. Consensus only decides the order of entries and that every entry obeys the rules. A lab's report is accepted because it is signed with the lab's registered key, so validators can't forge or change it. They could only delay it, and with validators taking turns, another one would include it in the next page. Keeping validators to a small trusted group also keeps the network fast. Labs and meter firms are often small companies that shouldn't have to run always-on servers.</p>
+    <p class="note prose">The classroom demo runs this design for real: four Besu validators in Docker on one laptop, standing in for four member firms. See <a href="#t-network">the network section</a> of the technical documentation.</p>
+  </div>
+</section>
+
+<section id="documents">
+  <div class="wrap stack">
+    <div class="kicker">What gets stored</div>
+    <h2>Fingerprints of documents, never the documents</h2>
+    <p class="prose">Commercial documents stay private with their owners. The shared record keeps only a <b>fingerprint</b> of each one: a short code worked out from the file. Change even one character in the file and the fingerprint no longer matches. The document types follow Singapore Standard SS 709 for digital bunkering documents.</p>
+    <div class="docs">
+      <div class="doc"><span class="abbr">DSC</span><h3>Sales confirmation</h3><p>The agreed order terms, fingerprinted when the order is placed.</p><code>0x3f9a…c21e</code></div>
+      <div class="doc"><span class="abbr">BMT</span><h3>Metering ticket</h3><p>The flow meter's printout of how much fuel went across.</p><code>0x8b04…71da</code></div>
+      <div class="doc"><span class="abbr">BDN</span><h3>Bunker delivery note</h3><p>The official electronic delivery note.</p><code>0xe17c…0b93</code></div>
+      <div class="doc"><span class="abbr">QTR</span><h3>Lab test report</h3><p>The quality result for the fuel sample.</p><code>0x52d6…ae40</code></div>
+      <div class="doc"><span class="abbr">NOP · SOF</span><h3>Protest &amp; statement of facts</h3><p>Evidence either side files during a dispute.</p><code>0xa0f1…5c88</code></div>
+    </div>
+    <p class="note">Fingerprints shown are illustrative.</p>
+  </div>
+</section>
+
+<section id="glossary">
+  <div class="wrap stack">
+    <div class="kicker">Glossary</div>
+    <h2>Words used on this page</h2>
+    <dl>
+      <dt>Bunkering</dt><dd>Supplying fuel to a ship, usually from a tanker barge while the ship is at anchor.</dd>
+      <dt>VLSFO</dt><dd>Very low sulphur fuel oil, the most common ship fuel under current emission rules.</dd>
+      <dt>e-BDN</dt><dd>Electronic bunker delivery note: the official digital record of how much fuel was delivered.</dd>
+      <dt>Anchorage</dt><dd>The named sea area where the ship waits and the delivery takes place, such as Western Petroleum A.</dd>
+      <dt>Escrow</dt><dd>A locked account. Money goes in up front and comes out only when the rules allow.</dd>
+      <dt>Tolerance</dt><dd>How far the delivered amount may differ from the order and still count as correct. Here 0.5%, or 2.5 t on 500 t.</dd>
+      <dt>Retention</dt><dd>The share of the payment held back until the quality test passes. Here 10%.</dd>
+      <dt>Arbiter</dt><dd>An independent referee who decides how frozen money is split when there is a dispute.</dd>
+      <dt>Fingerprint (hash)</dt><dd>A short code calculated from a document. It proves a document hasn't changed without revealing what it says.</dd>
+      <dt>Validator</dt><dd>A member firm's computer that checks and approves new pages of the shared record.</dd>
+      <dt>Consensus</dt><dd>The method validators use to agree on one version of the record. Here, over two-thirds must sign each page.</dd>
+      <dt>Mt</dt><dd>Million tonnes.</dd>
+      <dt>mSGD</dt><dd>A test token used in the demo in place of Singapore dollars. It has no real value.</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ================= TECHNICAL DOCUMENTATION ================= -->
+<div class="part" id="tech">
+  <div class="wrap stack">
+    <div class="kicker">Part 2 · Technical documentation</div>
+    <h2>How the app is built</h2>
+    <p>Everything above describes what BunkerSettle does. This part describes the code that does it: seven Solidity contracts, the rules they enforce, the Besu network they run on, the tests and how to run it all. Figures are taken from the code, not the spec.</p>
+    <ul class="toc">
+      <li><a href="#t-arch">Architecture</a></li>
+      <li><a href="#t-contracts">Contracts</a></li>
+      <li><a href="#t-states">Order states</a></li>
+      <li><a href="#t-roles">Roles</a></li>
+      <li><a href="#t-signed">Signed reports</a></li>
+      <li><a href="#t-network">Besu network</a></li>
+      <li><a href="#t-ui">Web app</a></li>
+      <li><a href="#t-tests">Tests</a></li>
+      <li><a href="#t-run">Run it</a></li>
+    </ul>
+  </div>
+</div>
+
+<section id="t-arch">
+  <div class="wrap stack">
+    <div class="kicker">Architecture</div>
+    <h2>Seven contracts, one owner of the order's state</h2>
+    <p class="prose"><code>BunkerOrder</code> is the only contract that changes an order's status. The evidence contracts report to it through hooks, and only <code>BunkerOrder</code> and <code>DisputeManager</code> can move money out of escrow. Every contract checks roles against one <code>ParticipantRegistry</code>. Each link is set once at deploy and can't be rewired afterwards.</p>
+    <figure class="diagram">
+      <svg viewBox="0 0 1000 470" role="img" aria-label="Contract architecture. DeliveryRecord and QualityRecord call hooks on BunkerOrder. BunkerOrder opens disputes on DisputeManager, which calls back on resolution. BunkerOrder deposits, releases and refunds through PaymentEscrow; DisputeManager splits held funds through PaymentEscrow. PaymentEscrow holds MockSGD. All contracts read roles from ParticipantRegistry.">
+        <defs>
+          <marker id="ta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0d0f12"/></marker>
+        </defs>
+        <g font-family="Source Sans 3, Segoe UI, Arial, sans-serif" font-size="13" fill="#0d0f12">
+          <!-- registry band -->
+          <rect x="20" y="20" width="960" height="56" fill="#f2f4f7" stroke="#0d0f12" stroke-width="3"/>
+          <text x="500" y="45" text-anchor="middle" font-family="Archivo, Arial, sans-serif" font-weight="800" font-size="17">ParticipantRegistry</text>
+          <text x="500" y="64" text-anchor="middle" fill="#4a5260">roles · suspension · names — every contract calls hasActiveRole()</text>
+          <!-- evidence -->
+          <g stroke="#0d0f12" stroke-width="3" fill="#ffffff">
+            <rect x="40" y="130" width="220" height="70"/><rect x="40" y="250" width="220" height="70"/>
+            <rect x="740" y="190" width="220" height="70"/>
+            <rect x="390" y="370" width="220" height="70"/><rect x="740" y="370" width="220" height="70"/>
+          </g>
+          <rect x="390" y="170" width="220" height="110" fill="#f2b705" stroke="#0d0f12" stroke-width="4"/>
+          <g font-family="Archivo, Arial, sans-serif" font-weight="800" font-size="16" text-anchor="middle">
+            <text x="150" y="160">DeliveryRecord</text><text x="150" y="280">QualityRecord</text>
+            <text x="500" y="210" font-size="18">BunkerOrder</text>
+            <text x="850" y="220">DisputeManager</text>
+            <text x="500" y="400">PaymentEscrow</text><text x="850" y="400">MockSGD (ERC-20)</text>
+          </g>
+          <g text-anchor="middle" fill="#4a5260">
+            <text x="150" y="180">meter + e-BDN, compares them</text>
+            <text x="150" y="300">lab pass / fail</text>
+            <text x="500" y="232">state machine · tranches</text>
+            <text x="500" y="250">settlement · pause</text>
+            <text x="850" y="240">evidence · arbiter ruling</text>
+            <text x="500" y="420">holds funds per order id</text>
+            <text x="850" y="420">test stand-in for SGD</text>
+          </g>
+          <g stroke="#0d0f12" stroke-width="2.5" fill="none" marker-end="url(#ta)">
+            <line x1="260" y1="165" x2="386" y2="200"/>
+            <line x1="260" y1="285" x2="386" y2="250"/>
+            <line x1="610" y1="205" x2="736" y2="205"/>
+            <line x1="736" y1="245" x2="614" y2="245"/>
+            <line x1="500" y1="280" x2="500" y2="366"/>
+            <line x1="800" y1="260" x2="580" y2="366"/>
+            <line x1="610" y1="405" x2="736" y2="405" marker-start="url(#ta)"/>
+          </g>
+          <g font-size="12">
+            <text x="268" y="160">onDeliveryVerified</text><text x="268" y="174">onQuantityMismatch</text>
+            <text x="268" y="300">onLabResult</text>
+            <text x="673" y="197" text-anchor="middle">openDispute</text>
+            <text x="673" y="263" text-anchor="middle">onDisputeResolved</text>
+            <text x="508" y="320">deposit · release · refund</text>
+            <text x="700" y="320">split</text>
+            <text x="673" y="397" text-anchor="middle">safeTransfer</text>
+          </g>
+        </g>
+      </svg>
+      <figcaption>Arrows are contract-to-contract calls. Each callee rejects any other caller with <code>OnlyModule</code>. Deploy order: Registry → MockSGD → PaymentEscrow → BunkerOrder → DeliveryRecord → QualityRecord → DisputeManager, then <code>setOrderContract</code>, <code>setDisputeManager</code> and <code>setModules</code>, each callable once (<code>AlreadyWired</code>).</figcaption>
+    </figure>
+    <div class="stats">
+      <div class="stat"><span class="big num">Solidity 0.8.24</span><span>EVM target Cancun, optimizer 200 runs</span></div>
+      <div class="stat"><span class="big num">OpenZeppelin 5</span><span>AccessControl, ERC20, Pausable, ReentrancyGuard, SafeERC20, EIP712, ECDSA</span></div>
+      <div class="stat"><span class="big num">Custom errors</span><span>every revert is named, e.g. <code>NotAuthorized(role, account)</code></span></div>
+      <div class="stat"><span class="big num">Events</span><span>on every state change, tagged with the SS 709 document type</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="t-contracts">
+  <div class="wrap stack">
+    <div class="kicker">Contract reference</div>
+    <h2>What each contract does and who may call it</h2>
+    <p class="prose">Shared enums, structs, role constants and all custom errors live in <code>contracts/interfaces/BunkerTypes.sol</code>. Two abstract bases do the access checks: <code>RoleGuard</code> asks the registry for an active role, and <code>SignedRoleGuard</code> adds EIP-712 signature recovery.</p>
+    <div class="contracts">
+      <article class="ct core">
+        <header><h3>BunkerOrder</h3><span class="mono">RoleGuard · Pausable · ReentrancyGuard</span></header>
+        <div class="body">
+          <ul class="fns">
+            <li><code>createOrder(params)</code><span>Buyer. Checks parties' roles, qty, price, tolerance ≤ 5%, retention ≤ 50%, future deadline.</span></li>
+            <li><code>acceptOrder(id)</code><span>The order's supplier, before the deadline.</span></li>
+            <li><code>fundOrder(id)</code><span>The order's bank. Escrows qty × price plus the tolerance buffer.</span></li>
+            <li><code>cancelOrder(id)</code><span>The order's buyer, before funding.</span></li>
+            <li><code>cancelExpired(id)</code><span>Anyone, after the deadline with no evidence. Full refund to the bank.</span></li>
+            <li><code>releaseAfterTimeout(id)</code><span>Anyone, once the retention window has passed without a lab result.</span></li>
+            <li><code>pause()</code> / <code>unpause()</code><span>Admin. Blocks new orders and funding only.</span></li>
+          </ul>
+          <div class="evs"><span class="lbl2">Events</span><br>OrderCreated · OrderAccepted · OrderFunded · OrderCancelled · QuantityApproved · OrderSettled · OrderDisputed · OrderResolved</div>
+        </div>
+      </article>
+      <article class="ct">
+        <header><h3>DeliveryRecord</h3><span class="mono">SignedRoleGuard · EIP-712 "BunkerSettle DeliveryRecord"</span></header>
+        <div class="body">
+          <ul class="fns">
+            <li><code>submitMeterReading(id, kg, ticketHash)</code><span>Meter oracle, once per funded order. Stores the BMT hash.</span></li>
+            <li><code>submitEBDN(id, kg, ebdnHash)</code><span>e-BDN oracle, once per funded order. Stores the BDN hash.</span></li>
+            <li><code>…BySig(…, deadline, sig)</code><span>Anyone relays; the signer must hold the oracle role.</span></li>
+          </ul>
+          <p>When both are in, it compares them. A gap above tolerance calls <code>onQuantityMismatch</code>; otherwise <code>onDeliveryVerified</code> with the meter figure, which is the quantity of record.</p>
+          <div class="evs"><span class="lbl2">Events</span><br>MeterReadingSubmitted · EBDNSubmitted · DeliveryVerified · QuantityMismatch</div>
+        </div>
+      </article>
+      <article class="ct">
+        <header><h3>QualityRecord</h3><span class="mono">SignedRoleGuard · EIP-712 "BunkerSettle QualityRecord"</span></header>
+        <div class="body">
+          <ul class="fns">
+            <li><code>submitLabResult(id, passed, reportHash)</code><span>Lab, once per order, after quantity is approved.</span></li>
+            <li><code>submitLabResultBySig(…, deadline, sig)</code><span>Anyone relays; the signer must hold the lab role.</span></li>
+          </ul>
+          <p>Calls <code>onLabResult</code>: a pass settles the order, a fail opens a quality dispute.</p>
+          <div class="evs"><span class="lbl2">Events</span><br>LabResultSubmitted</div>
+        </div>
+      </article>
+      <article class="ct">
+        <header><h3>DisputeManager</h3><span class="mono">RoleGuard · ReentrancyGuard</span></header>
+        <div class="body">
+          <ul class="fns">
+            <li><code>openDispute(orderId, reason)</code><span>BunkerOrder (automatic) or the order's buyer or supplier (reason MANUAL).</span></li>
+            <li><code>submitEvidence(disputeId, docType, docHash, note)</code><span>The order's buyer, supplier or bank, while disputed.</span></li>
+            <li><code>resolve(disputeId, supplierShareBps)</code><span>Arbiter. Splits the held amount through <code>escrow.split</code>.</span></li>
+          </ul>
+          <div class="evs"><span class="lbl2">Events</span><br>DisputeOpened · EvidenceSubmitted · DisputeResolved</div>
+        </div>
+      </article>
+      <article class="ct">
+        <header><h3>PaymentEscrow</h3><span class="mono">RoleGuard · ReentrancyGuard · SafeERC20</span></header>
+        <div class="body">
+          <ul class="fns">
+            <li><code>deposit · release · refund</code><span>BunkerOrder only. Moves mSGD in from the bank, out to the supplier or back to the bank.</span></li>
+            <li><code>split(id, supplier, sAmt, bank, bAmt)</code><span>DisputeManager only.</span></li>
+            <li><code>balanceOf(id)</code><span>Funds held for one order.</span></li>
+          </ul>
+          <div class="evs"><span class="lbl2">Events</span><br>Deposited · Released · Refunded · Split · OrderContractSet · DisputeManagerSet</div>
+        </div>
+      </article>
+      <article class="ct">
+        <header><h3>ParticipantRegistry</h3><span class="mono">AccessControl</span></header>
+        <div class="body">
+          <ul class="fns">
+            <li><code>register(account, role, name)</code><span>Admin. Grants a role and a display name.</span></li>
+            <li><code>revoke · suspend · reinstate</code><span>Admin. A suspended account fails every role check with <code>AccountSuspended</code>.</span></li>
+            <li><code>hasActiveRole(role, account)</code><span>The check every other contract uses.</span></li>
+          </ul>
+          <div class="evs"><span class="lbl2">Events</span><br>ParticipantRegistered · ParticipantRevoked · ParticipantSuspended · ParticipantReinstated</div>
+        </div>
+      </article>
+      <article class="ct">
+        <header><h3>MockSGD</h3><span class="mono">ERC20 "mSGD", 18 decimals</span></header>
+        <div class="body">
+          <ul class="fns">
+            <li><code>mint(to, amount)</code><span>Admin. Test money for the demo bank.</span></li>
+          </ul>
+          <p>In production this would be a regulated SGD token or a bank's tokenised deposit.</p>
+        </div>
+      </article>
+    </div>
+    <h3>Custom errors</h3>
+    <p class="prose mono" style="font-size:15px; line-height:1.7">NotAuthorized · AccountSuspended · NotOrderParty · InvalidState · InvalidParameter · DeadlinePassed · DeadlineNotReached · AlreadySubmitted · RetentionWindowOpen · InsufficientEscrow · OnlyModule · AlreadyWired · SignatureExpired · EnforcedPause</p>
+  </div>
+</section>
+
+<section id="t-states">
+  <div class="wrap stack">
+    <div class="kicker">Order state machine</div>
+    <h2>Eight statuses, and every way between them</h2>
+    <p class="prose">Any call made in the wrong status reverts with <code>InvalidState</code>. Amounts: payable = delivered kg × price ÷ 1000, capped at the funded amount. The first tranche is payable × (1 − retention).</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>From</th><th>To</th><th>Trigger</th><th>Caller</th><th>Money</th></tr></thead>
+        <tbody>
+          <tr><td><span class="st">Created</span></td><td><span class="st">Accepted</span></td><td><code>acceptOrder</code> before deadline</td><td>Order's supplier</td><td>None</td></tr>
+          <tr><td><span class="st">Created</span> / <span class="st">Accepted</span></td><td><span class="st">Cancelled</span></td><td><code>cancelOrder</code></td><td>Order's buyer</td><td>None</td></tr>
+          <tr><td><span class="st">Accepted</span></td><td><span class="st y">Funded</span></td><td><code>fundOrder</code></td><td>Order's bank</td><td>Price + tolerance buffer into escrow</td></tr>
+          <tr><td><span class="st y">Funded</span></td><td><span class="st">Cancelled</span></td><td><code>cancelExpired</code>, past deadline, no evidence</td><td>Anyone</td><td>Full refund to bank</td></tr>
+          <tr><td><span class="st y">Funded</span></td><td><span class="st y">QuantityApproved</span></td><td>Second oracle report; meter ≈ e-BDN ≈ order</td><td>Meter / e-BDN oracle</td><td>First tranche (90%) to supplier</td></tr>
+          <tr><td><span class="st y">Funded</span></td><td><span class="st r">Disputed</span></td><td>Meter vs e-BDN gap above tolerance: <code>QUANTITY_MISMATCH</code></td><td>Automatic</td><td>All held</td></tr>
+          <tr><td><span class="st y">Funded</span></td><td><span class="st r">Disputed</span></td><td>Meter vs ordered qty above tolerance: <code>OUT_OF_TOLERANCE</code></td><td>Automatic</td><td>All held</td></tr>
+          <tr><td><span class="st y">QuantityApproved</span></td><td><span class="st g">Settled</span></td><td><code>submitLabResult(pass)</code></td><td>Lab</td><td>Retention to supplier, unused buffer to bank</td></tr>
+          <tr><td><span class="st y">QuantityApproved</span></td><td><span class="st g">Settled</span></td><td><code>releaseAfterTimeout</code> after the retention window</td><td>Anyone</td><td>Same as a pass</td></tr>
+          <tr><td><span class="st y">QuantityApproved</span></td><td><span class="st r">Disputed</span></td><td>Lab fail: <code>QUALITY_FAIL</code></td><td>Automatic</td><td>Retention held</td></tr>
+          <tr><td><span class="st y">Funded</span> / <span class="st y">QuantityApproved</span></td><td><span class="st r">Disputed</span></td><td><code>openDispute(MANUAL)</code></td><td>Order's buyer or supplier</td><td>Held</td></tr>
+          <tr><td><span class="st r">Disputed</span></td><td><span class="st g">Resolved</span></td><td><code>resolve(share)</code></td><td>Arbiter</td><td>Held amount split by share</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note prose">Settlement also computes an invoice fingerprint (SS 709 DSI) from the order, delivered quantity and amount, and emits it in <code>OrderSettled</code>. Demo parameters: tolerance 50 bps, retention 1,000 bps, retention window 120 s (14 days in production), delivery deadline 7 days.</p>
+  </div>
+</section>
+
+<section id="t-roles">
+  <div class="wrap cols2">
+    <div class="stack">
+      <div class="kicker">Roles and demo accounts</div>
+      <h2>Nine accounts, eight roles</h2>
+      <p class="prose">A role is <code>keccak256</code> of its name. <code>scripts/seed.ts</code> registers the Hardhat test accounts below. It is safe to re-run and refuses to run against the wrong chain.</p>
+    </div>
+    <div class="table-wrap" style="margin-top:0">
+      <table style="min-width:420px">
+        <thead><tr><th>#</th><th>Role</th><th>Demo name</th></tr></thead>
+        <tbody>
+          <tr><td class="num">0</td><td><code>ADMIN</code></td><td>Port Operator (also deployer)</td></tr>
+          <tr><td class="num">1</td><td><code>BANK</code></td><td>Harbour Bank, 5,000,000 mSGD</td></tr>
+          <tr><td class="num">2</td><td><code>BUYER</code></td><td>MV Kirana Shipping</td></tr>
+          <tr><td class="num">3</td><td><code>SUPPLIER</code></td><td>Lion Bunkers</td></tr>
+          <tr><td class="num">4</td><td><code>METER_ORACLE</code></td><td>Meter Oracle</td></tr>
+          <tr><td class="num">5</td><td><code>EBDN_ORACLE</code></td><td>e-BDN Provider</td></tr>
+          <tr><td class="num">6</td><td><code>LAB</code></td><td>Fuel Lab</td></tr>
+          <tr><td class="num">7</td><td><code>ARBITER</code></td><td>Arbiter</td></tr>
+          <tr><td class="num">8</td><td>none</td><td>Outsider, left unregistered on purpose</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="t-signed">
+  <div class="wrap stack">
+    <div class="kicker">Signed oracle reports (EIP-712)</div>
+    <h2>A meter or lab can sign a report without paying for a transaction</h2>
+    <p class="prose">The oracle signs typed data off-chain. Any account relays it to a <code>…BySig</code> function, and the contract recovers the signer and checks the signer's role, not the relayer's. That lets small firms report without running a funded wallet.</p>
+    <pre class="cmd">MeterReading(uint256 id, uint256 qtyKg, bytes32 ticketHash, uint256 deadline)
+EBDN(uint256 id, uint256 qtyKg, bytes32 ebdnHash, uint256 deadline)
+LabResult(uint256 id, bool passed, bytes32 reportHash, uint256 deadline)
+<span class="c">// domain: name "BunkerSettle DeliveryRecord" | "BunkerSettle QualityRecord", version "1", chainId, verifyingContract</span></pre>
+    <ul class="pain">
+      <li><b>No replay.</b> Each report is accepted once per order (<code>AlreadySubmitted</code>), so no nonce is needed.</li>
+      <li><b>Expiry.</b> A signature past its deadline fails with <code>SignatureExpired</code>. The app uses chain time + 15 minutes.</li>
+      <li><b>Live role check.</b> A signer suspended after signing is still refused at relay time.</li>
+    </ul>
+
+    <h3>Where it fits in the business</h3>
+    <p class="prose">Signing helps when the firm that holds the data isn't the firm that can easily send a blockchain transaction. The oracle keeps a signing key. A different party sends the transaction.</p>
+    <div class="tiers">
+      <div class="tier t-send"><h3>Barge flow meter</h3><p>The meter system sits on a barge with patchy connectivity and no funded wallet. It signs the reading when pumping ends, and the supplier's agent or the port platform relays it once the barge is back in range.</p><p class="note">The contract still records the meter oracle as the reporter, not the supplier.</p></div>
+      <div class="tier t-send"><h3>e-BDN provider</h3><p>One provider serves many deliveries a day. It signs each report, and a platform operator submits them in batches and pays the fees, as a relayer service would.</p><p class="note">No wallet or nonce handling per order.</p></div>
+      <div class="tier t-send"><h3>Independent lab</h3><p>The lab signs its pass or fail result once. Whoever needs the result on-chain, usually the supplier or the buyer, sends it within the validity window.</p><p class="note">Bound to one order and one report, so it can't be reused.</p></div>
+    </div>
+
+    <h3>Who pays the gas</h3>
+    <p class="prose">The <b>relayer</b> pays: whichever account sends the transaction that carries the signature. The oracle that signed pays nothing. In practice that is a platform operator covering it as a cost of running the service, or the party who benefits most, such as the supplier relaying the meter and e-BDN reports so it gets paid. A bank could also sponsor it as part of its service.</p>
+    <p class="note prose">In the classroom demo the Besu network has a gas price of zero, so nobody pays. The contract doesn't refund or charge the relayer, so who pays on a real network is a business arrangement outside the code. A fee taken from the escrow would be one way to close that gap.</p>
+
+    <h3>What a signature proves, and what it doesn't</h3>
+    <div class="cols2">
+      <div class="tier t-mem"><h3>It proves</h3><ul class="srcs"><li>The report came from the registered oracle's key.</li><li>The order, quantity, document fingerprint and expiry were not changed after signing, so a relayer can't edit the number.</li><li>The oracle holds the right role at the moment the report is relayed.</li></ul></div>
+      <div class="tier t-val"><h3>It does not prove</h3><ul class="srcs"><li>That the reading is true. An oracle could sign a wrong number, and the contract would record it as that oracle's report.</li><li>That one organisation checked another's data. Cross-checking is done by the contract, which compares the meter figure with the e-BDN figure.</li></ul></div>
+    </div>
+    <p class="note prose">The protection against a wrong number comes from the design around it: separate reporters for quantity and quality, a tolerance check between the two quantities, and the dispute process when they disagree.</p>
+  </div>
+</section>
+
+<section id="t-network">
+  <div class="wrap stack">
+    <div class="kicker">Enterprise network</div>
+    <h2>Four Hyperledger Besu validators running QBFT</h2>
+    <p class="prose">The demo runs on a real permissioned network: four Besu nodes in Docker, each with its own validator key and its own copy of the chain, peering over a private bridge network. They stand in for four member firms on one machine. Node 1 serves the web app and MetaMask.</p>
+    <div class="stats">
+      <div class="stat"><span class="big num">4 validators</span><span>live while 3 agree; tolerates 1 failed node</span></div>
+      <div class="stat"><span class="big num">2 s blocks</span><span>QBFT, final on commit, no forks</span></div>
+      <div class="stat"><span class="big num">Chain 4520</span><span>RPC on ports 8550 to 8553, one per node</span></div>
+      <div class="stat"><span class="big num">Zero gas</span><span><code>zeroBaseFee</code>, min gas price 0, 30 M block gas limit</span></div>
+    </div>
+    <div class="cols2">
+      <div class="stack">
+        <h3>Configuration</h3>
+        <ul class="pain">
+          <li>Image <code>hyperledger/besu:26.10.2</code>, genesis from <code>besu operator generate-blockchain-config</code>.</li>
+          <li>Genesis enables Berlin, London, Shanghai and Cancun at block 0, so the same Cancun bytecode runs on Hardhat and Besu.</li>
+          <li>Hardhat accounts 0 to 19 are funded in genesis, so deploy and seed run unchanged with <code>--network besu</code>.</li>
+          <li>Validator keys are committed for reproducibility. They are dev-only and secure nothing real.</li>
+        </ul>
+      </div>
+      <div class="stack">
+        <h3>Fault-tolerance demo</h3>
+        <ul class="pain">
+          <li><b>Stop validator 2, 3 or 4.</b> Its card turns red in the app's Network panel and blocks keep coming.</li>
+          <li><b>Stop a second.</b> Only 2 of 4 remain, so the panel shows "Halted — needs 3 of 4 validators".</li>
+          <li><b>Start them again.</b> The chain resumes within about 2 minutes as QBFT's round timer backs off.</li>
+          <li>Never stop validator 1 during the demo: the app reads through it.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="t-ui">
+  <div class="wrap stack">
+    <div class="kicker">Web app</div>
+    <h2>A React app that talks to the chain directly</h2>
+    <p class="prose">Vite, React 18 and ethers 6, with no backend. Reads go through a JSON-RPC provider, so the app works before a wallet connects. Writes are signed in MetaMask. Every revert is decoded against all seven ABIs and shown by name.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>View</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><b>Harbour</b></td><td>Map of Singapore anchorages with live orders, plus the Besu Network panel: validator cards, proposer of the latest block, block time.</td></tr>
+          <tr><td><b>Order</b></td><td>Status pipeline, escrow tank showing held and retained funds, and the next action for the connected account.</td></tr>
+          <tr><td><b>New order</b></td><td>Order form with demo values filled in and an anchorage picker.</td></tr>
+          <tr><td><b>Oracle console</b></td><td>Meter, e-BDN and lab reports. Pasted text is hashed with keccak256. Sign-only and Relay for EIP-712.</td></tr>
+          <tr><td><b>Disputes</b></td><td>Open disputes, evidence by SS 709 document type, and the arbiter's share slider.</td></tr>
+          <tr><td><b>Activity</b></td><td>One card per transaction with a plain-English line, plus a raw event table. Built from one <code>getLogs</code> call per block across all contracts.</td></tr>
+          <tr><td><b>Market</b></td><td>Monthly Singapore bunker sales from data.gov.sg, with a bundled fallback file.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="t-tests">
+  <div class="wrap stack">
+    <div class="kicker">Testing</div>
+    <h2>247 tests, 99% of lines covered</h2>
+    <div class="stats">
+      <div class="stat"><span class="big num">247</span><span>Hardhat tests in 8 files: registry, order, delivery, quality, dispute, signed, wiring, end-to-end</span></div>
+      <div class="stat"><span class="big num">99.4%</span><span>line coverage (<code>npm run coverage</code>)</span></div>
+      <div class="stat"><span class="big num">Every revert</span><span>has its own test, asserted by custom error name</span></div>
+    </div>
+    <h3>Scripted scenarios (<code>npm run scenarios</code>)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Scenario</th><th>Ends in</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td>Normal: meter 500.2 t, e-BDN 500.0 t, lab pass</td><td><span class="st g">Settled</span></td></tr>
+          <tr><td class="num">2</td><td>Short delivery: both report 480 t</td><td><span class="st r">Disputed</span> OUT_OF_TOLERANCE</td></tr>
+          <tr><td class="num">3</td><td>Contaminated fuel: lab fail</td><td><span class="st r">Disputed</span> QUALITY_FAIL</td></tr>
+          <tr><td class="num">4</td><td>Outsider submits a meter reading</td><td>Reverts <code>NotAuthorized</code>, order unchanged</td></tr>
+          <tr><td class="num">5</td><td>Arbiter rules 70 / 30 on scenarios 2 and 3</td><td><span class="st g">Resolved</span></td></tr>
+          <tr><td class="num">6</td><td>Oracles sign, outsider relays; one forged relay rejected</td><td><span class="st g">Settled</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="t-run">
+  <div class="wrap stack">
+    <div class="kicker">Run it</div>
+    <h2>From a clean checkout to the demo</h2>
+    <div class="cols2">
+      <div class="stack">
+        <h3>On Besu (the demo)</h3>
+<pre class="cmd">npm install
+npm test                <span class="c"># 247 passing</span>
+npm run besu:up         <span class="c"># start 4 validators</span>
+npm run deploy:besu     <span class="c"># deploy + seed</span>
+npm run scenarios:besu  <span class="c"># optional</span>
+npm run ui              <span class="c"># http://localhost:5173</span></pre>
+        <p class="note">MetaMask: RPC <code>http://127.0.0.1:8550</code>, chain ID 4520, symbol ETH. Import the Hardhat test keys. <code>npm run besu:reset</code> wipes the chain.</p>
+      </div>
+      <div class="stack">
+        <h3>On a local Hardhat chain</h3>
+<pre class="cmd">npm run node            <span class="c"># chain 31337, port 8545</span>
+npm run deploy
+npm run scenarios
+npm run ui</pre>
+        <p class="note">Hardhat adds a Fast-forward control for time windows. The contracts also compile in Remix, since they import only <code>@openzeppelin/…</code> and relative paths.</p>
+      </div>
+    </div>
+    <h3>Repository</h3>
+    <dl>
+      <dt><code>contracts/</code></dt><dd>Six core contracts, <code>base/</code> (RoleGuard, SignedRoleGuard), <code>interfaces/</code> and <code>mocks/MockSGD</code>.</dd>
+      <dt><code>test/</code></dt><dd>Eight Hardhat test files and helpers.</dd>
+      <dt><code>scripts/</code></dt><dd>Deploy, seed, scenarios, submission export and the sales-data fetcher.</dd>
+      <dt><code>besu/</code></dt><dd>Docker Compose file, genesis, QBFT config and dev validator keys.</dd>
+      <dt><code>ui/</code></dt><dd>The React app.</dd>
+      <dt><code>docs/</code></dt><dd><code>DECISIONS.md</code>, every design choice the spec left open.</dd>
+    </dl>
+  </div>
+</section>
+</main>
+
+<section id="sources">
+  <div class="wrap stack">
+    <div class="kicker">Sources</div>
+    <ol class="srcs">
+      <li>MPA, Bunker Sales Breakdown (Monthly), <a href="https://data.gov.sg/datasets/d_4f5abbf4486bf8e52bbed3be56dde562/view">data.gov.sg</a>. 2025 total 56.77 Mt; monthly average for 2025.</li>
+      <li>Ship &amp; Bunker, <a href="https://shipandbunker.com/news/apac/456201-analysis-singapore-bunker-sales-reach-new-record-high-in-2025">Singapore bunker sales reach new record high in 2025</a>: Singapore VLSFO averaged about US$507.5/t in 2025. Value estimates multiply volume by about US$500/t; fuel types differ in price, so treat them as rough.</li>
+      <li>Bunker Market, <a href="https://bunkermarket.com/?p=28827">42,603 vessels called for bunkers in 2025</a> (MPA figures). Calls, not individual deliveries.</li>
+      <li>MPA, <a href="https://mpa.gov.sg/media-centre/details/strong-growth-momentum-for-maritime-singapore">Strong growth momentum for Maritime Singapore</a> (2024 results).</li>
+      <li>Ship &amp; Bunker, <a href="https://shipandbunker.com/news/apac/327260-singapore-bunker-supplier-count-drops-to-just-39-firms">Singapore bunker supplier count drops to just 39 firms</a>.</li>
+      <li>Ship &amp; Bunker, <a href="https://shipandbunker.com/news/world/888991-new-terms-for-bimco-standard-bunker-contract-expected-next-week">BIMCO standard bunker contract terms</a>: 30 days after delivery as the default credit period.</li>
+      <li>IBIA and BIMCO, <a href="https://safety4sea.com/wp-content/uploads/2022/12/IBIA-BIMCO-Industry-desire-for-implementation-of-bunker-licensing-2022_12.pdf">industry survey, 2022</a>. Global respondents; dispute rates and average costs.</li>
+      <li>MPA, <a href="https://mpa.gov.sg/media-centre/details/mpa-completes-its-investigations-into-bunker-fuel-contamination-in-singapore-port">investigation into bunker fuel contamination</a>; Seatrade Maritime, <a href="https://www.seatrade-maritime.com/bunkering/200-ships-bunkered-contaminated-fuel-in-singapore">200 ships bunkered contaminated fuel</a>.</li>
+      <li>MPA, <a href="https://www.mpa.gov.sg/port-marine-ops/marine-services/bunkering/digital-bunkering">Digital bunkering</a>; Seatrade Maritime, <a href="https://www.seatrade-maritime.com/bunkering/the-world-s-largest-bunkering-port-to-go-digital-from-april-2025">port to go digital from April 2025</a>.</li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">BunkerSettle is a student project for IS452. All company names are fictional, and the meter, delivery-note and lab inputs are simulated.</div>
+</footer>
+
+<script>
+(function () {
+  var S = [
+    { id: "normal", label: "Normal delivery", verdict: ["ok", "Settled"],
+      steps: ["Meter reads 500.2 t and the delivery note says 500.0 t.", "They agree within 0.5%, and both are inside the order's limits.", "90% of the bill goes to the supplier straight away.", "The lab passes the fuel, so the last 10% follows and the bank gets the unused cushion back."],
+      bar: [["m-sup", 99.54], ["m-bank", 0.46]],
+      money: [["Supplier", "490,196.00"], ["Bank refunded", "2,254.00"], ["Still locked", "0"]] },
+    { id: "short", label: "Short delivery", verdict: ["bad", "Dispute"],
+      steps: ["Meter and delivery note both read 480 t.", "The order allowed 497.5 t to 502.5 t, so 480 t is too little.", "A dispute opens automatically with the reason “out of tolerance”.", "No money is paid out. It waits for the arbiter."],
+      bar: [["m-dispute", 100]],
+      money: [["Supplier", "0"], ["Bank refunded", "0"], ["Frozen", "492,450.00"]] },
+    { id: "mismatch", label: "Records disagree", verdict: ["bad", "Dispute"],
+      steps: ["Meter reads 500 t but the delivery note says 490 t.", "The two sources differ by 2%, more than the 0.5% allowed.", "A dispute opens automatically with the reason “quantity mismatch”.", "No money is paid out until the arbiter decides."],
+      bar: [["m-dispute", 100]],
+      money: [["Supplier", "0"], ["Bank refunded", "0"], ["Frozen", "492,450.00"]] },
+    { id: "quality", label: "Bad fuel", verdict: ["bad", "Dispute"],
+      steps: ["Quantity checks pass, so 90% of the bill is paid as normal.", "The lab tests the sample and it fails.", "A dispute opens automatically with the reason “quality fail”.", "The held 10% and the cushion stay frozen. The supplier can't collect them."],
+      bar: [["m-sup", 89.59], ["m-dispute", 10.41]],
+      money: [["Supplier", "441,176.40"], ["Bank refunded", "0"], ["Frozen", "51,273.60"]] },
+    { id: "outsider", label: "Outsider", verdict: ["blocked", "Rejected"],
+      steps: ["An account that was never registered sends a fake meter reading.", "The system checks its role and finds none.", "The reading is refused with a “not authorised” error.", "Nothing on the order changes, and no money moves."],
+      bar: [["m-held", 100]],
+      money: [["Supplier", "0"], ["Bank refunded", "0"], ["Still locked", "492,450.00"]] },
+    { id: "resolve", label: "Arbiter decides", verdict: ["ok", "Resolved"],
+      steps: ["The arbiter reviews the evidence filed on the short delivery.", "They award 70% of the frozen money to the supplier and 30% to the bank.", "The locked account pays both sides in one step.", "The order is closed as resolved."],
+      bar: [["m-sup", 70], ["m-bank", 30]],
+      money: [["Supplier", "344,715.00"], ["Bank refunded", "147,735.00"], ["Frozen", "0"]] }
+  ];
+  var tabs = document.getElementById("tabs"), panel = document.getElementById("panel");
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function show(i) {
+    var s = S[i];
+    Array.prototype.forEach.call(tabs.children, function (b, j) { b.setAttribute("aria-selected", j === i ? "true" : "false"); b.tabIndex = j === i ? 0 : -1; });
+    var bar = s.bar.map(function (b) { return '<span class="' + b[0] + '" style="width:' + b[1] + '%"></span>'; }).join("");
+    var money = s.money.map(function (m) { return '<div class="moneyline"><span>' + esc(m[0]) + '</span><b class="num">' + esc(m[1]) + '</b></div>'; }).join("");
+    panel.innerHTML =
+      '<div><span class="verdict ' + s.verdict[0] + '"><span class="stamp">' + esc(s.verdict[1]) + '</span>' + esc(s.label) + '</span>' +
+      '<ol>' + s.steps.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join("") + '</ol></div>' +
+      '<div class="side"><b>Where the 492,450 is now</b><div class="meter" role="img" aria-label="Money split for ' + esc(s.label) + '">' + bar + '</div>' + money + '</div>';
+  }
+  S.forEach(function (s, i) {
+    var b = document.createElement("button");
+    b.type = "button"; b.id = "tab-" + s.id; b.setAttribute("role", "tab"); b.textContent = s.label;
+    b.addEventListener("click", function () { show(i); });
+    b.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+        var n = (i + (e.key === "ArrowRight" ? 1 : S.length - 1)) % S.length;
+        show(n); tabs.children[n].focus(); e.preventDefault();
+      }
+    });
+    tabs.appendChild(b);
+  });
+  show(0);
+})();
+</script>
+</body>
+</html>
+

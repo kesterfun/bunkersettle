@@ -99,12 +99,6 @@ export function Header() {
             </button>
           </span>
         )}
-        <button type="button" className="toggle" aria-pressed={c.uiChecks} onClick={() => c.setUiChecks(!c.uiChecks)}>
-          UI checks {c.uiChecks ? "on" : "off"}
-        </button>
-        <button type="button" className="toggle" aria-pressed={c.projector} onClick={() => c.setProjector(!c.projector)}>
-          Projector mode
-        </button>
       </nav>
       {c.paused && <div className="hd-paused">Order creation and funding are paused by the admin.</div>}
     </header>

@@ -134,10 +134,6 @@ export interface ChainState {
   orderId: number | null;
   go(view: View, orderId?: number): void;
   /** Client-side checks that disable impossible actions. Default off (SPEC 8). */
-  uiChecks: boolean;
-  setUiChecks(v: boolean): void;
-  projector: boolean;
-  setProjector(v: boolean): void;
   toasts: Toast[];
   dismissToast(id: number): void;
 }
@@ -156,21 +152,6 @@ export function useChain(): ChainState {
 export function useChainNow(): number {
   return useContext(ClockContext);
 }
-
-const readStore = (key: string) => {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-};
-const writeStore = (key: string, value: string) => {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // storage unavailable; setting just won't persist
-  }
-};
 
 function toOrder(r: ethers.Result, held: bigint, d: ethers.Result, lab: ethers.Result): OrderView {
   return {
@@ -599,20 +580,6 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     window.scrollTo({ top: 0 });
   }, []);
 
-  const [uiChecks, setUiChecksState] = useState(() => readStore("bs.uiChecks") === "1");
-  const setUiChecks = useCallback((v: boolean) => {
-    setUiChecksState(v);
-    writeStore("bs.uiChecks", v ? "1" : "0");
-  }, []);
-  const [projector, setProjectorState] = useState(() => readStore("bs.projector") === "1");
-  const setProjector = useCallback((v: boolean) => {
-    setProjectorState(v);
-    writeStore("bs.projector", v ? "1" : "0");
-  }, []);
-  useEffect(() => {
-    document.documentElement.classList.toggle("projector", projector);
-  }, [projector]);
-
   const nameOf = useCallback(
     (address: string) => {
       const p = participants.find((x) => x.address.toLowerCase() === address.toLowerCase());
@@ -653,10 +620,6 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     view,
     orderId,
     go,
-    uiChecks,
-    setUiChecks,
-    projector,
-    setProjector,
     toasts,
     dismissToast,
   };

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import type { ethers } from "ethers";
 import { useChain, useChainNow } from "../chain/ChainContext";
-import { fmtTonnes, hashText, shortHex } from "../domain";
+import { ROLE_LABEL, fmtTonnes, hashText, shortHex } from "../domain";
 import { StatusChip } from "./ui";
 import "./OracleConsole.css";
 
@@ -73,9 +73,12 @@ const saveSigned = (v: Signed[]) => {
   }
 };
 
+type OracleRole = "METER_ORACLE" | "EBDN_ORACLE" | "LAB";
+const ORACLE_ROLES: OracleRole[] = ["METER_ORACLE", "EBDN_ORACLE", "LAB"];
+
 /** Demo-only stand-in for the meter logger, the e-BDN system and the lab. */
 export function OracleConsole() {
-  const { orders, orderId, send, sign, read, nameOf, uiChecks } = useChain();
+  const { orders, orderId, send, sign, read, nameOf, me } = useChain();
   const chainNow = useChainNow();
   const fallback = [...orders].reverse().find((o) => o.status === "Funded")?.id ?? orders[orders.length - 1]?.id ?? 0;
   const [sel, setSel] = useState<number | null>(null);
@@ -133,8 +136,121 @@ export function OracleConsole() {
     if (ok) setSigned(signed.filter((x) => x !== it));
   };
 
-  const notFunded = uiChecks && order && order.status !== "Funded" ? "Order must be Funded." : "";
-  const notApproved = uiChecks && order && order.status !== "QuantityApproved" ? "Order must be Qty approved." : "";
+  const panels: Record<OracleRole, ReactNode> = {
+    METER_ORACLE: (
+      <section className="panel">
+              <div className="panel-head">
+                <span className="label">Meter reading</span>
+                <span className="label">Sign: #4</span>
+              </div>
+              <div className="panel-body">
+                <label className="field">
+                  <span>Quantity (tonnes)</span>
+                  <input id="oc-meter-t" type="number" step="any" value={mT} onChange={(e) => setMT(e.target.value)} />
+                </label>
+                <label className="field">
+                  <span>Metering ticket text (BMT)</span>
+                  <textarea id="oc-meter-text" rows={3} value={mText} onChange={(e) => setMText(e.target.value)} />
+                  <small className="mono oc-hash">{hashText(mText)}</small>
+                </label>
+                <button
+                  id="oc-meter-submit"
+                  className="btn"
+                  onClick={() => send("Submit meter reading", (c) => c.DeliveryRecord.submitMeterReading(id, kg(mT), hashText(mText)))}
+                >
+                  Submit meter reading
+                </button>
+                <button
+                  id="oc-meter-sign"
+                  className="btn btn-ghost"
+                  onClick={() => signKind("meter", kg(mT), hashText(mText))}
+                >
+                  Sign only (no gas)
+                </button>
+              </div>
+            </section>
+    ),
+    EBDN_ORACLE: (
+      <section className="panel">
+              <div className="panel-head">
+                <span className="label">e-BDN</span>
+                <span className="label">Sign: #5</span>
+              </div>
+              <div className="panel-body">
+                <label className="field">
+                  <span>Quantity (tonnes)</span>
+                  <input id="oc-ebdn-t" type="number" step="any" value={eT} onChange={(e) => setET(e.target.value)} />
+                </label>
+                <label className="field">
+                  <span>BDN text (BDN)</span>
+                  <textarea id="oc-ebdn-text" rows={3} value={eText} onChange={(e) => setEText(e.target.value)} />
+                  <small className="mono oc-hash">{hashText(eText)}</small>
+                </label>
+                <button
+                  id="oc-ebdn-submit"
+                  className="btn"
+                  onClick={() => send("Submit e-BDN", (c) => c.DeliveryRecord.submitEBDN(id, kg(eT), hashText(eText)))}
+                >
+                  Submit e-BDN
+                </button>
+                <button
+                  id="oc-ebdn-sign"
+                  className="btn btn-ghost"
+                  onClick={() => signKind("ebdn", kg(eT), hashText(eText))}
+                >
+                  Sign only (no gas)
+                </button>
+              </div>
+            </section>
+    ),
+    LAB: (
+      <section className="panel">
+              <div className="panel-head">
+                <span className="label">Lab result</span>
+                <span className="label">Sign: #6</span>
+              </div>
+              <div className="panel-body">
+                <fieldset className="oc-radio">
+                  <legend className="label">Result (QTR)</legend>
+                  <label htmlFor="oc-lab-pass">
+                    <input id="oc-lab-pass" type="radio" name="oc-lab" checked={pass} onChange={() => setPass(true)} /> Pass
+                  </label>
+                  <label htmlFor="oc-lab-fail">
+                    <input id="oc-lab-fail" type="radio" name="oc-lab" checked={!pass} onChange={() => setPass(false)} /> Fail
+                  </label>
+                </fieldset>
+                <label className="field">
+                  <span>Report text (QTR)</span>
+                  <textarea id="oc-lab-text" rows={3} value={lText} onChange={(e) => setLText(e.target.value)} />
+                  <small className="mono oc-hash">{hashText(lText)}</small>
+                </label>
+                <button
+                  id="oc-lab-submit"
+                  className="btn"
+                  onClick={() => send("Submit lab result", (c) => c.QualityRecord.submitLabResult(id, pass, hashText(lText)))}
+                >
+                  Submit lab result
+                </button>
+                <button
+                  id="oc-lab-sign"
+                  className="btn btn-ghost"
+                  onClick={() => signKind("lab", pass ? 1n : 0n, hashText(lText))}
+                >
+                  Sign only (no gas)
+                </button>
+              </div>
+            </section>
+    ),
+  };
+  const mineRoles = ORACLE_ROLES.filter((r) => me?.roles.includes(r));
+  const otherRoles = ORACLE_ROLES.filter((r) => !mineRoles.includes(r));
+  const grid = (rs: OracleRole[]) => (
+    <div className="oc-grid">
+      {rs.map((r) => (
+        <Fragment key={r}>{panels[r]}</Fragment>
+      ))}
+    </div>
+  );
 
   return (
     <>
@@ -184,118 +300,26 @@ export function OracleConsole() {
               Scenario 3: lab fail
             </button>
           </div>
-          <small className="oc-hint">Sign with #4 (meter), #5 (e-BDN) or #6 (lab). Switch to #8 to see NotAuthorized.</small>
+          <small className="oc-hint">Each account signs its own type: #4 meter, #5 e-BDN, #6 lab. Switch to #8 to see NotAuthorized.</small>
         </div>
       </section>
 
-      <div className="oc-grid">
-        <section className="panel">
-          <div className="panel-head">
-            <span className="label">Meter reading</span>
-            <span className="label">Sign: #4</span>
-          </div>
-          <div className="panel-body">
-            <label className="field">
-              <span>Quantity (tonnes)</span>
-              <input id="oc-meter-t" type="number" step="any" value={mT} onChange={(e) => setMT(e.target.value)} />
-            </label>
-            <label className="field">
-              <span>Metering ticket text (BMT)</span>
-              <textarea id="oc-meter-text" rows={3} value={mText} onChange={(e) => setMText(e.target.value)} />
-              <small className="mono oc-hash">{hashText(mText)}</small>
-            </label>
-            <button
-              id="oc-meter-submit"
-              className="btn"
-              disabled={!!notFunded}
-              onClick={() => send("Submit meter reading", (c) => c.DeliveryRecord.submitMeterReading(id, kg(mT), hashText(mText)))}
-            >
-              Submit meter reading
-            </button>
-            <button
-              id="oc-meter-sign"
-              className="btn btn-ghost"
-              onClick={() => signKind("meter", kg(mT), hashText(mText))}
-            >
-              Sign only (no gas)
-            </button>
-            {notFunded && <small className="oc-hint">{notFunded}</small>}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-head">
-            <span className="label">e-BDN</span>
-            <span className="label">Sign: #5</span>
-          </div>
-          <div className="panel-body">
-            <label className="field">
-              <span>Quantity (tonnes)</span>
-              <input id="oc-ebdn-t" type="number" step="any" value={eT} onChange={(e) => setET(e.target.value)} />
-            </label>
-            <label className="field">
-              <span>BDN text (BDN)</span>
-              <textarea id="oc-ebdn-text" rows={3} value={eText} onChange={(e) => setEText(e.target.value)} />
-              <small className="mono oc-hash">{hashText(eText)}</small>
-            </label>
-            <button
-              id="oc-ebdn-submit"
-              className="btn"
-              disabled={!!notFunded}
-              onClick={() => send("Submit e-BDN", (c) => c.DeliveryRecord.submitEBDN(id, kg(eT), hashText(eText)))}
-            >
-              Submit e-BDN
-            </button>
-            <button
-              id="oc-ebdn-sign"
-              className="btn btn-ghost"
-              onClick={() => signKind("ebdn", kg(eT), hashText(eText))}
-            >
-              Sign only (no gas)
-            </button>
-            {notFunded && <small className="oc-hint">{notFunded}</small>}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-head">
-            <span className="label">Lab result</span>
-            <span className="label">Sign: #6</span>
-          </div>
-          <div className="panel-body">
-            <fieldset className="oc-radio">
-              <legend className="label">Result (QTR)</legend>
-              <label htmlFor="oc-lab-pass">
-                <input id="oc-lab-pass" type="radio" name="oc-lab" checked={pass} onChange={() => setPass(true)} /> Pass
-              </label>
-              <label htmlFor="oc-lab-fail">
-                <input id="oc-lab-fail" type="radio" name="oc-lab" checked={!pass} onChange={() => setPass(false)} /> Fail
-              </label>
-            </fieldset>
-            <label className="field">
-              <span>Report text (QTR)</span>
-              <textarea id="oc-lab-text" rows={3} value={lText} onChange={(e) => setLText(e.target.value)} />
-              <small className="mono oc-hash">{hashText(lText)}</small>
-            </label>
-            <button
-              id="oc-lab-submit"
-              className="btn"
-              disabled={!!notApproved}
-              onClick={() => send("Submit lab result", (c) => c.QualityRecord.submitLabResult(id, pass, hashText(lText)))}
-            >
-              Submit lab result
-            </button>
-            <button
-              id="oc-lab-sign"
-              className="btn btn-ghost"
-              onClick={() => signKind("lab", pass ? 1n : 0n, hashText(lText))}
-            >
-              Sign only (no gas)
-            </button>
-            {notApproved && <small className="oc-hint">{notApproved}</small>}
-          </div>
-        </section>
-      </div>
+      {mineRoles.length > 0 && (
+        <p className="oc-you">
+          You are signed in as {mineRoles.map((r) => ROLE_LABEL[r]).join(" and ")}. Your submission is below.
+        </p>
+      )}
+      {mineRoles.length > 0 && grid(mineRoles)}
+      {otherRoles.length > 0 && (
+        <details className="oc-others" open={mineRoles.length === 0}>
+          <summary>
+            {mineRoles.length > 0
+              ? "Other roles' submissions. Press one to demo the revert."
+              : "Submissions by role. This account holds none of these roles, so any submit will revert."}
+          </summary>
+          {grid(otherRoles)}
+        </details>
+      )}
 
       <section className="panel">
         <div className="panel-head">

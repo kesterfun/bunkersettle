@@ -50,3 +50,5 @@
   gap: 0.5rem;
   align-items: center;
 }
+.oc-you{font-weight:600;padding:.5rem .7rem;border-left:.4rem solid var(--yellow);background:var(--pale)}
+.oc-others>summary{cursor:pointer;font-size:.9rem;color:var(--grey);font-weight:600;margin-bottom:.8rem}

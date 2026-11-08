@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { ContractTransactionResponse } from "ethers";
 import { ADDRESSES, useChain, useChainNow, type Contracts } from "../chain/ChainContext";
 import {
@@ -13,8 +13,6 @@ import {
   fundingAmount,
   isBunkering,
   isMyTurn,
-  nextStep,
-  ROLE_LABEL,
   shortHex,
   type OrderView,
   type StatusName,
@@ -22,7 +20,7 @@ import {
 import { ActivityLog } from "./ActivityLog";
 import { BravoFlag, Stamp, Who } from "./ui";
 import { EscrowTank } from "./EscrowTank";
-import { DemoGuide, NextStepBox } from "./ScenarioStepper";
+import { NextStepBox } from "./ScenarioStepper";
 import "./OrderScreen.css";
 
 const ZERO_HASH = /^0x0*$/;
@@ -82,9 +80,8 @@ interface Act {
 }
 
 export function OrderScreen() {
-  const { orders, disputes, me, allowance, orderId, go, send, uiChecks, nameOf, events } = useChain();
+  const { orders, disputes, me, allowance, orderId, go, send, nameOf, events } = useChain();
   const now = useChainNow();
-  const [guideOpen, setGuideOpen] = useState(false);
 
   if (orders.length === 0) {
     return (
@@ -167,14 +164,11 @@ export function OrderScreen() {
   // demo can still trigger a revert from the wrong account (SPEC 8: never hide contract reverts).
   const myActs = acts.filter((a) => a.party);
   const otherActs = acts.filter((a) => !a.party);
-  const next = nextStep(o);
   const renderAct = (a: Act) => {
-    const blocked = uiChecks && !a.can;
     return (
       <div key={a.key} className={`os-act${a.turn ? " os-act-turn" : ""}`}>
         <button
           className={`btn${a.danger ? " btn-danger" : ""}${a.party ? "" : " btn-ghost"}`}
-          disabled={blocked}
           onClick={() => void send(a.label, a.run)}
         >
           {a.label}
@@ -182,7 +176,6 @@ export function OrderScreen() {
         <span className="os-act-who">
           {a.turn && <b className="os-turn">Your turn</b>}
           {a.who}
-          {blocked && <small>{a.reason}</small>}
         </span>
       </div>
     );
@@ -198,10 +191,20 @@ export function OrderScreen() {
     st === "Disputed" && dispute ? REASON_LABEL[dispute.reason] : lastBlock !== undefined ? `Block ${lastBlock}` : "";
   const delivered = o.deliveredKg === 0n && o.delivery.meterSubmitted ? o.delivery.meterKg : o.deliveredKg;
 
+  // Order terms panel: same facts for everyone, plus one line for the party about to commit.
+  const payable = (o.qtyKg * o.pricePerTonne) / 1000n;
+  const lock = fundingAmount(o);
+  const retained = (payable * BigInt(o.retentionBps)) / 10_000n;
+  const tolKg = (o.qtyKg * BigInt(o.toleranceBps)) / 10_000n;
+  const commitment =
+    st === "Created" && mine(o.supplier)
+      ? `By accepting, you agree to deliver ${fmtTonnes(o.qtyKg)} ${o.fuelGrade} to ${anchorage?.name ?? "the anchorage"} for ${fmtSgd(payable)} mSGD. ${fmtSgd(retained)} mSGD of that is held back until the lab result passes.`
+      : st === "Accepted" && mine(o.bank)
+        ? `By funding, you lock ${fmtSgd(lock)} mSGD in escrow for this order. The supplier is paid as the delivery is verified.`
+        : "";
+
   return (
     <div className="os-grid">
-      <DemoGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
-
       <section className="os-main">
         <div className="os-bar">
           <label className="os-pick">
@@ -214,9 +217,6 @@ export function OrderScreen() {
               ))}
             </select>
           </label>
-          <button type="button" className="btn btn-sm btn-ghost os-guide-btn" onClick={() => setGuideOpen(true)}>
-            Demo guide
-          </button>
           <span className="os-bar-gap" />
           {isBunkering(o) && (
             <span className="os-bravo">
@@ -242,29 +242,64 @@ export function OrderScreen() {
 
         <Pipeline o={o} />
 
+        <NextStepBox order={o} />
+
+        <div className="os-terms">
+          <span className="label">Order terms</span>
+          {commitment && <p className="os-commit">{commitment}</p>}
+          <dl>
+            <div><dt>Price</dt><dd>{fmtSgd(o.pricePerTonne)} mSGD per tonne, {fmtSgd(payable)} in total</dd></div>
+            <div><dt>Bank locks</dt><dd>{fmtSgd(lock)} mSGD: the total plus {o.toleranceBps / 100} % tolerance</dd></div>
+            <div><dt>Tolerance</dt><dd>{o.toleranceBps / 100} % (±{fmtTonnes(tolKg)}) between ordered and delivered quantity</dd></div>
+            <div>
+              <dt>Retention</dt>
+              <dd>{o.retentionBps / 100} % ({fmtSgd(retained)} mSGD) held until the lab passes, or released {fmtDuration(o.retentionWindow)} after approval</dd>
+            </div>
+            <div>
+              <dt>Delivery</dt>
+              <dd>
+                {anchorage?.name ?? "Anchorage"}, by {new Date(o.deliveryDeadline * 1000).toLocaleString()}
+                {showDeliveryClock && <b className="os-clock"> · {clock(o.deliveryDeadline)} left</b>}
+              </dd>
+            </div>
+            {st === "QuantityApproved" && (
+              <div><dt>Retention release</dt><dd><b className="os-clock">{clock(retentionEnd)}</b> until it can be released without a lab result</dd></div>
+            )}
+          </dl>
+        </div>
+
+        <div className="os-actions">
+          <span className="label">Actions</span>
+          {acts.length === 0 && st !== "Disputed" && <p className="os-hint">No actions left on this order.</p>}
+          {acts.length > 0 && myActs.length === 0 && (
+            <p className="os-hint">
+              Nothing for {me ? nameOf(me.address) : "this account"} to do here.
+            </p>
+          )}
+          {myActs.map(renderAct)}
+          {otherActs.length > 0 && (
+            <details className="os-others">
+              <summary>Other parties' actions ({otherActs.length}). Press one to demo the revert.</summary>
+              {otherActs.map(renderAct)}
+            </details>
+          )}
+          {(st === "Funded" || st === "QuantityApproved") && (
+            <button className="btn btn-ghost" onClick={() => go("oracle", o.id)}>
+              Oracle console ({st === "Funded" ? "meter / e-BDN" : "lab"})
+            </button>
+          )}
+          {st === "Disputed" && (
+            <button className="btn" onClick={() => go("disputes")}>
+              Go to Disputes view (arbiter resolves)
+            </button>
+          )}
+        </div>
+
         <div className="os-money">
           <div><span className="label">Funded</span><b>{fmtSgd(o.fundedAmount)}</b></div>
           <div><span className="label">Paid to supplier</span><b>{fmtSgd(o.releasedAmount)}</b></div>
           <div><span className="label">Refunded to bank</span><b>{fmtSgd(o.refundedAmount)}</b></div>
           <div><span className="label">Delivered</span><b>{fmtTonnes(delivered)}</b></div>
-        </div>
-
-        <div className="os-deadlines">
-          {showDeliveryClock && (
-            <div>
-              <span className="label">Delivery deadline</span>
-              <b className="mono">{clock(o.deliveryDeadline)}</b>
-            </div>
-          )}
-          {st === "QuantityApproved" && (
-            <div>
-              <span className="label">Retention window</span>
-              <b className="mono">{clock(retentionEnd)}</b>
-            </div>
-          )}
-          {(showDeliveryClock || st === "QuantityApproved") && (
-            <p className="os-hint">Waiting on a timer? Use Fast-forward in the header.</p>
-          )}
         </div>
 
         <div className="os-evidence">
@@ -302,39 +337,9 @@ export function OrderScreen() {
           )}
         </div>
 
-        <NextStepBox order={o} />
-
-        <div className="os-actions">
-          <span className="label">Actions</span>
-          {acts.length === 0 && st !== "Disputed" && <p className="os-hint">No actions left on this order.</p>}
-          {acts.length > 0 && myActs.length === 0 && (
-            <p className="os-hint">
-              Nothing for {me ? nameOf(me.address) : "this account"} to do here.
-              {next && <> Next: {next.label} ({ROLE_LABEL[next.role]}).</>}
-            </p>
-          )}
-          {myActs.map(renderAct)}
-          {otherActs.length > 0 && (
-            <details className="os-others">
-              <summary>Other parties' actions ({otherActs.length}). Press one to demo the revert.</summary>
-              {otherActs.map(renderAct)}
-            </details>
-          )}
-          {(st === "Funded" || st === "QuantityApproved") && (
-            <button className="btn btn-ghost" onClick={() => go("oracle", o.id)}>
-              Oracle console ({st === "Funded" ? "meter / e-BDN" : "lab"})
-            </button>
-          )}
-          {st === "Disputed" && (
-            <button className="btn" onClick={() => go("disputes")}>
-              Go to Disputes view (arbiter resolves)
-            </button>
-          )}
-        </div>
-
         <div className="os-feed">
           <span className="label">Activity for this order</span>
-          <ActivityLog orderId={o.id} limit={8} compact />
+          <ActivityLog orderId={o.id} limit={5} compact />
         </div>
       </section>
 
