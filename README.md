@@ -60,7 +60,7 @@ The UI needs `npm run deploy` to have run first. It imports `ui/src/deployments.
    | Chain ID | 31337 |
    | Currency symbol | ETH |
 
-2. Import accounts #1 to #8 into MetaMask. Use the private keys printed by `npm run node`. Account #0 is the Port Operator (Admin) and is only needed if you want to act as admin; import it too if you do.
+2. Import accounts #1 to #9 into MetaMask (#9 is the financier, needed for run A). Use the private keys printed by `npm run node`. Account #0 is the Port Operator (Admin) and is only needed if you want to act as admin; import it too if you do.
 3. Open http://localhost:5173 and connect every imported account to the site.
 4. Use the **Change account** button in the header to open MetaMask's account picker.
 
