@@ -139,32 +139,40 @@ export function CreateOrderForm() {
               <label className="field">
                 <span>Fuel grade</span>
                 <input id="cf-grade" value={grade} onChange={(e) => setGrade(e.target.value)} />
+                <small>For example VLSFO (very low sulphur fuel oil).</small>
               </label>
               <label className="field">
                 <span>Quantity (tonnes)</span>
                 <input id="cf-tonnes" type="number" min="0" step="any" value={tonnes} onChange={(e) => setTonnes(e.target.value)} />
+                <small>Amount ordered. Stored on-chain in kilograms.</small>
               </label>
               <label className="field">
                 <span>Price (mSGD per tonne)</span>
                 <input id="cf-price" type="number" min="0" step="any" value={price} onChange={(e) => setPrice(e.target.value)} />
+                <small>mSGD is the demo stand-in for Singapore dollars (1 mSGD = 1 SGD).</small>
               </label>
               <label className="field">
                 <span>Tolerance (bps)</span>
-                <input id="cf-tol" type="number" min="0" step="1" value={tol} onChange={(e) => setTol(e.target.value)} />
-                <small>50 bps = 0.5 %</small>
+                <input id="cf-tol" type="number" min="0" max="500" step="1" value={tol} onChange={(e) => setTol(e.target.value)} />
+                <small>Allowed gap between ordered and delivered quantity. 100 bps = 1 %.</small>
               </label>
               <label className="field">
                 <span>Retention (bps)</span>
-                <input id="cf-ret" type="number" min="0" step="1" value={ret} onChange={(e) => setRet(e.target.value)} />
-                <small>1000 bps = 10 % held back</small>
+                <input id="cf-ret" type="number" min="0" max="5000" step="1" value={ret} onChange={(e) => setRet(e.target.value)} />
+                <small>Share of the payment held back until the lab result passes. 100 bps = 1 %.</small>
               </label>
               <label className="field">
                 <span>Delivery deadline (days from now)</span>
                 <input id="cf-days" type="number" min="0" step="any" value={days} onChange={(e) => setDays(e.target.value)} />
+                <small>Time limit for the supplier to deliver the fuel.</small>
               </label>
               <label className="field">
                 <span>Retention window (seconds)</span>
                 <input id="cf-window" type="number" min="0" step="1" value={retWindow} onChange={(e) => setRetWindow(e.target.value)} />
+                <small>
+                  How long the held-back amount waits after the quantity is approved before it can be released without a lab result.
+                  Short demo value; real deals would use days.
+                </small>
               </label>
               <label className="field">
                 <span>Anchorage</span>
@@ -175,6 +183,7 @@ export function CreateOrderForm() {
                     </option>
                   ))}
                 </select>
+                <small>Agreed place of delivery.</small>
               </label>
             </div>
             <label className="field">

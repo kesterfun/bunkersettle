@@ -82,7 +82,7 @@ interface Act {
 }
 
 export function OrderScreen() {
-  const { orders, disputes, me, allowance, orderId, go, send, uiChecks, nameOf, blockNumber } = useChain();
+  const { orders, disputes, me, allowance, orderId, go, send, uiChecks, nameOf, events } = useChain();
   const now = useChainNow();
   const [guideOpen, setGuideOpen] = useState(false);
 
@@ -192,7 +192,10 @@ export function OrderScreen() {
   const retentionEnd = o.approvedAt + o.retentionWindow;
   const clock = (end: number) => (end - now > 0 ? fmtDuration(end - now) : "passed");
 
-  const stampNote = st === "Disputed" && dispute ? REASON_LABEL[dispute.reason] : `Block ${blockNumber}`;
+  // Block where this order last changed (events are newest first), the same block the Activity tab shows.
+  const lastBlock = events.find((e) => e.orderId === o.id)?.blockNumber;
+  const stampNote =
+    st === "Disputed" && dispute ? REASON_LABEL[dispute.reason] : lastBlock !== undefined ? `Block ${lastBlock}` : "";
   const delivered = o.deliveredKg === 0n && o.delivery.meterSubmitted ? o.delivery.meterKg : o.deliveredKg;
 
   return (
