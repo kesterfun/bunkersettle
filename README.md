@@ -28,6 +28,7 @@ Prerequisite: Docker Desktop running. Run these in order.
 | 1 | `npm run besu:up` | Starts 4 validator containers (`bunkersettle-validator1` to `4`, image `hyperledger/besu:26.10.2`): a Hyperledger Besu QBFT network, 2-second blocks, chain ID 4520. Wait about 20 seconds for them to peer. |
 | 2 | `npm run deploy` | Deploys and wires the seven contracts and writes `ui/src/deployments.json`. Then it registers the demo participants, mints 5,000,000 mSGD to the bank and approves the escrow. |
 | 3 (optional) | `npm run scenarios` | Runs demo runs A to C plus the signed-submission extra headless and prints balances after each step. Good for rehearsal. |
+| 3b (for the live demo) | `npm run demo:orders` | Stages orders on a freshly deployed chain: 4 finished orders (3 settled, 1 resolved after a lab fail) so the supplier's track record has data, then order #5 for run A (Funded), #6 for run B (Funded) and #7 for run C (delivered, waiting for the lab). Prints a cheat sheet of the live steps. Run it instead of `scenarios`, not after it. |
 | 4 | `npm run ui` | Starts the Vite app at http://localhost:5173. |
 
 The UI needs `npm run deploy` to have run first. It imports `ui/src/deployments.json`, which is git-ignored and changes on every deploy. If you wipe the chain with `npm run besu:reset`, run `besu:up` and `deploy` again.
@@ -48,6 +49,7 @@ Time-based paths cannot be shown live on a real chain. `cancelExpired` (after th
 | `npm run gas` | Runs the tests with the gas reporter on. |
 | `npm run deploy` | Deploys, wires and seeds on Besu (see above). |
 | `npm run scenarios` | Runs demo runs A to C headless against Besu, plus the signed-submission extra. |
+| `npm run demo:orders` | Stages the live-demo orders (history plus runs A to C, each stopped before its live step). |
 | `npm run ui` | Starts the Vite dev server. |
 | `npm run besu:up` / `besu:down` / `besu:reset` / `besu:logs` | Start, stop, wipe and follow the local Besu QBFT network (see Run order). |
 | `npm run fetch-sales` | Refreshes `ui/public/bunker-sales.json` from data.gov.sg (the fallback for the Market view). |

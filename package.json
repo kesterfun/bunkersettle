@@ -10,6 +10,7 @@
     "gas": "cross-env REPORT_GAS=true hardhat test",
     "deploy": "hardhat run scripts/deploy.ts --network besu && hardhat run scripts/seed.ts --network besu",
     "scenarios": "hardhat run scripts/scenarios.ts --network besu",
+    "demo:orders": "hardhat run scripts/demo-orders.ts --network besu",
     "besu:up": "docker compose -f besu/docker-compose.yml up -d",
     "besu:down": "docker compose -f besu/docker-compose.yml down",
     "besu:reset": "docker compose -f besu/docker-compose.yml down -v",
