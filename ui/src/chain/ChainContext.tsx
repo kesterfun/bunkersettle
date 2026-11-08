@@ -119,7 +119,7 @@ export interface ChainState {
    */
   send(label: string, build: (c: Contracts) => Promise<ethers.ContractTransactionResponse>, doneLabel?: string): Promise<boolean>;
   /**
-   * Asks the connected MetaMask account to sign (no transaction, no gas), e.g. an EIP-712 message.
+   * Asks the connected MetaMask account to sign (no transaction is sent), e.g. an EIP-712 message.
    * Shows a toast that ends in "signed" or in the error. Resolves null when signing failed.
    */
   sign<T>(label: string, run: (signer: ethers.Signer) => Promise<T>): Promise<T | null>;
@@ -557,7 +557,7 @@ export function ChainProvider({ children }: { children: ReactNode }) {
   const sign = useCallback<ChainState["sign"]>(
     async (label, run) => {
       const id = ++toastId.current;
-      upsertToast({ id, kind: "pending", title: label, detail: "Sign in MetaMask (no gas)…" });
+      upsertToast({ id, kind: "pending", title: label, detail: "Sign in MetaMask (nothing is sent yet)…" });
       try {
         if (!window.ethereum) throw new Error("MetaMask is not installed.");
         if (!accountRef.current) throw new Error("Connect MetaMask first.");

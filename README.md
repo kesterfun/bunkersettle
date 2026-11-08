@@ -125,7 +125,7 @@ A failed transaction shows the decoded custom error in a toast, for example `Not
 
 ## Signed oracle submissions (EIP-712)
 
-The meter oracle, e-BDN provider and lab can sign their submission off-chain instead of sending it. Signing costs no gas. Any account then relays the signature on-chain. The contract recovers the signer, checks that the signer holds the oracle's role, and records the signer in the event. Changing any field after signing breaks the signature, so the relayer cannot alter the submission. A signature from an account without the role reverts with `NotAuthorized`, and one past its deadline reverts with `SignatureExpired`.
+The meter oracle, e-BDN provider and lab can sign their submission off-chain instead of sending it. Signing works offline (for example on a barge with no connection) and sends nothing. Any account then relays the signature on-chain. The contract recovers the signer, checks that the signer holds the oracle's role, and records the signer in the event. Changing any field after signing breaks the signature, so the relayer cannot alter the submission. A signature from an account without the role reverts with `NotAuthorized`, and one past its deadline reverts with `SignatureExpired`.
 
 | Function | Signed by | Contract |
 |---|---|---|
@@ -137,7 +137,7 @@ The meter oracle, e-BDN provider and lab can sign their submission off-chain ins
 
 To try it in the UI (Oracle console):
 
-1. Create, accept and fund an order first, as in run A below. Then, as #4, open Oracle console, pick the funded order, fill in the meter reading and press **Sign only (no gas)**. MetaMask asks for a signature, not a transaction.
+1. Create, accept and fund an order first, as in run A below. Then, as #4, open Oracle console, pick the funded order, fill in the meter reading and press **Sign offline**. MetaMask asks for a signature, not a transaction.
 2. Repeat as #5 for the e-BDN and as #6 for the lab result. Each signed item appears under **Signed submissions (EIP-712)**.
 3. Click **Change account** and switch to #8 (unregistered).
 4. In **Signed submissions (EIP-712)**, press **Relay** for each item. Each relay is a normal transaction from #8. The event shows #4, #5 or #6 as the signer.
@@ -283,7 +283,7 @@ Order IDs start at 1. Amounts are mSGD with 18 decimals, so 485,100 mSGD is `485
 2. **Run B: short delivery to resolution.** New order 2, accept, fund. Meter oracle: `submitMeterReading(2, 480000, ...)`. e-BDN: `submitEBDN(2, 480000, ...)`. A dispute opens (OUT_OF_TOLERANCE). Arbiter: `DisputeManager.resolve(1, 7000)`. The claim was not sold, so the supplier gets 70% of the held amount and the bank gets 30%.
 3. **Run C: contaminated fuel.** New order 3, accept, fund. Submit 500200 and 500000. Lab: `submitLabResult(3, false, ...)`. A dispute opens (QUALITY_FAIL) and the retention stays held.
 
-The `...BySig` functions need an EIP-712 signature from the oracle's key. Remix has no simple way to make one, so produce it with a script or with MetaMask (the UI's **Sign only** button). The direct functions above work as before.
+The `...BySig` functions need an EIP-712 signature from the oracle's key. Remix has no simple way to make one, so produce it with a script or with MetaMask (the UI's **Sign offline** button). The direct functions above work as before.
 
 ## Submission bundle
 

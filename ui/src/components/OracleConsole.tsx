@@ -107,7 +107,7 @@ export function OracleConsole() {
     saveSigned(v);
   };
 
-  /** Oracle signs the typed message in MetaMask. No transaction, no gas. */
+  /** Oracle signs the typed message in MetaMask. No transaction is sent. */
   const signKind = async (kind: Kind, value: bigint, hash: string) => {
     const contract = kind === "lab" ? read.QualityRecord : read.DeliveryRecord;
     const deadline = chainNow + SIGNATURE_TTL;
@@ -165,7 +165,7 @@ export function OracleConsole() {
                   className="btn btn-ghost"
                   onClick={() => signKind("meter", kg(mT), hashText(mText))}
                 >
-                  Sign only (no gas)
+                  Sign offline
                 </button>
               </div>
             </section>
@@ -198,7 +198,7 @@ export function OracleConsole() {
                   className="btn btn-ghost"
                   onClick={() => signKind("ebdn", kg(eT), hashText(eText))}
                 >
-                  Sign only (no gas)
+                  Sign offline
                 </button>
               </div>
             </section>
@@ -236,7 +236,7 @@ export function OracleConsole() {
                   className="btn btn-ghost"
                   onClick={() => signKind("lab", pass ? 1n : 0n, hashText(lText))}
                 >
-                  Sign only (no gas)
+                  Sign offline
                 </button>
               </div>
             </section>
@@ -328,7 +328,7 @@ export function OracleConsole() {
         </div>
         <div className="panel-body">
           <small className="oc-hint">
-            An oracle signs without paying gas, then any account relays the signature. The contract records the
+            An oracle signs offline (for example on a barge with no connection), then any account relays the signature. The contract records the
             signer, not the relayer, and rejects it if the signer lacks the role. Sign as #4 / #5 / #6, use
             Change account to switch to #8 (no role), then press Relay.
           </small>
