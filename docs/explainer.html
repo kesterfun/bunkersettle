@@ -325,12 +325,13 @@ pre.cmd .c { color: #9aa3b0; }
 <section id="cast">
   <div class="wrap stack">
     <div class="kicker">Who is involved</div>
-    <h2>Eight parties, each with one job</h2>
+    <h2>Nine parties, each with one job</h2>
     <p class="prose">Every party is registered in advance and given a role. The system checks the role before accepting anything. The company names are made up for the demo.</p>
     <div class="cast">
       <div class="role"><span class="chip f-blue"></span><span class="who">Buyer</span><h3>MV Kirana Shipping</h3><p>The ship operator. Places the order: fuel type, amount, price, where to deliver.</p></div>
       <div class="role"><span class="chip f-yellow"></span><span class="who">Fuel supplier</span><h3>Lion Bunkers</h3><p>Accepts the order and delivers the fuel by barge. Gets paid as the checks pass.</p></div>
       <div class="role"><span class="chip f-split"></span><span class="who">Bank</span><h3>Harbour Bank</h3><p>Puts the money into the locked account up front, and gets back anything not owed.</p></div>
+      <div class="role"><span class="chip f-split"></span><span class="who">Financier</span><h3>Straits Trade Finance</h3><p>Optional. Buys the supplier's right to payment at a discount, so the supplier is paid early. Then receives the 90% and the held 10% when they are released.</p></div>
       <div class="role"><span class="chip f-red"></span><span class="who">Measurement source</span><h3>Flow meter</h3><p>Reports how much fuel actually passed through the barge's meter.</p></div>
       <div class="role"><span class="chip f-red"></span><span class="who">Measurement source</span><h3>e-BDN provider</h3><p>Reports the amount on the official electronic delivery note.</p></div>
       <div class="role"><span class="chip f-red"></span><span class="who">Measurement source</span><h3>Testing lab</h3><p>Tests a fuel sample and reports pass or fail.</p></div>
@@ -546,7 +547,7 @@ pre.cmd .c { color: #9aa3b0; }
     <div class="tiers">
       <div class="tier t-val"><h3>Validators</h3><p>Approve pages. Run by a few neutral, well-resourced members, for example the network operator, two banks and an industry body.</p><p class="note">Suggested set of 4. Tolerates 1 faulty.</p></div>
       <div class="tier t-mem"><h3>Member copies</h3><p>Buyers and suppliers can keep a full copy and check every page themselves, without voting.</p><p class="note">Optional. Adds independent checking.</p></div>
-      <div class="tier t-send"><h3>Entry senders</h3><p>Flow meter, e-BDN provider and labs only send signed reports. They are trusted because of their registered role, not because they vote.</p><p class="note">No servers to run. No part in consensus.</p></div>
+      <div class="tier t-send"><h3>Entry senders</h3><p>Flow meter, e-BDN provider and labs only send signed reports. They are trusted because of their registered role, not because they vote.</p><p class="note">No blockchain node. No part in consensus. Just a signing key and a small program at the data source.</p></div>
     </div>
     <p class="prose"><b>So do labs need to take part in consensus?</b> No. Consensus only decides the order of entries and that every entry obeys the rules. A lab's report is accepted because it is signed with the lab's registered key, so validators can't forge or change it. They could only delay it, and with validators taking turns, another one would include it in the next page. Keeping validators to a small trusted group also keeps the network fast. Labs and meter firms are often small companies that shouldn't have to run always-on servers.</p>
     <p class="note prose">The classroom demo runs this design for real: four Besu validators in Docker on one laptop, standing in for four member firms. See <a href="#t-network">the network section</a> of the technical documentation.</p>
@@ -596,7 +597,7 @@ pre.cmd .c { color: #9aa3b0; }
   <div class="wrap stack">
     <div class="kicker">Part 2 · Technical documentation</div>
     <h2>How the app is built</h2>
-    <p>Everything above describes what BunkerSettle does. This part describes the code that does it: seven Solidity contracts, the rules they enforce, the Besu network they run on, the tests and how to run it all. Figures are taken from the code, not the spec.</p>
+    <p>Everything above describes what BunkerSettle does. This part describes the code that does it: eight Solidity contracts, the rules they enforce, the Besu network they run on, the tests and how to run it all. Figures are taken from the code, not the spec.</p>
     <ul class="toc">
       <li><a href="#t-arch">Architecture</a></li>
       <li><a href="#t-contracts">Contracts</a></li>
@@ -614,10 +615,10 @@ pre.cmd .c { color: #9aa3b0; }
 <section id="t-arch">
   <div class="wrap stack">
     <div class="kicker">Architecture</div>
-    <h2>Seven contracts, one owner of the order's state</h2>
-    <p class="prose"><code>BunkerOrder</code> is the only contract that changes an order's status. The evidence contracts report to it through hooks, and only <code>BunkerOrder</code> and <code>DisputeManager</code> can move money out of escrow. Every contract checks roles against one <code>ParticipantRegistry</code>. Each link is set once at deploy and can't be rewired afterwards.</p>
+    <h2>Eight contracts, one owner of the order's state</h2>
+    <p class="prose"><code>BunkerOrder</code> is the only contract that changes an order's status. The evidence contracts report to it through hooks, and only <code>BunkerOrder</code> and <code>DisputeManager</code> can move money out of escrow. Every contract checks roles against one <code>ParticipantRegistry</code>. <code>SettlementClaim</code> is an ERC-721 token for the supplier's right to be paid. <code>BunkerOrder</code> mints it when an order is funded and asks it who the payee is. Each link is set once at deploy and can't be rewired afterwards.</p>
     <figure class="diagram">
-      <svg viewBox="0 0 1000 470" role="img" aria-label="Contract architecture. DeliveryRecord and QualityRecord call hooks on BunkerOrder. BunkerOrder opens disputes on DisputeManager, which calls back on resolution. BunkerOrder deposits, releases and refunds through PaymentEscrow; DisputeManager splits held funds through PaymentEscrow. PaymentEscrow holds MockSGD. All contracts read roles from ParticipantRegistry.">
+      <svg viewBox="0 0 1000 470" role="img" aria-label="Contract architecture. DeliveryRecord and QualityRecord call hooks on BunkerOrder. BunkerOrder opens disputes on DisputeManager, which calls back on resolution. BunkerOrder deposits, releases and refunds through PaymentEscrow; DisputeManager splits held funds through PaymentEscrow. PaymentEscrow holds MockSGD. BunkerOrder mints and burns the SettlementClaim payment claim and pays its holder. All contracts read roles from ParticipantRegistry.">
         <defs>
           <marker id="ta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0d0f12"/></marker>
         </defs>
@@ -631,6 +632,7 @@ pre.cmd .c { color: #9aa3b0; }
             <rect x="40" y="130" width="220" height="70"/><rect x="40" y="250" width="220" height="70"/>
             <rect x="740" y="190" width="220" height="70"/>
             <rect x="390" y="370" width="220" height="70"/><rect x="740" y="370" width="220" height="70"/>
+            <rect x="40" y="370" width="220" height="70"/>
           </g>
           <rect x="390" y="170" width="220" height="110" fill="#f2b705" stroke="#0d0f12" stroke-width="4"/>
           <g font-family="Archivo, Arial, sans-serif" font-weight="800" font-size="16" text-anchor="middle">
@@ -638,6 +640,7 @@ pre.cmd .c { color: #9aa3b0; }
             <text x="500" y="210" font-size="18">BunkerOrder</text>
             <text x="850" y="220">DisputeManager</text>
             <text x="500" y="400">PaymentEscrow</text><text x="850" y="400">MockSGD (ERC-20)</text>
+            <text x="150" y="400">SettlementClaim</text>
           </g>
           <g text-anchor="middle" fill="#4a5260">
             <text x="150" y="180">meter + e-BDN, compares them</text>
@@ -647,6 +650,7 @@ pre.cmd .c { color: #9aa3b0; }
             <text x="850" y="240">evidence · arbiter ruling</text>
             <text x="500" y="420">holds funds per order id</text>
             <text x="850" y="420">test stand-in for SGD</text>
+            <text x="150" y="420">ERC-721 payment claim</text>
           </g>
           <g stroke="#0d0f12" stroke-width="2.5" fill="none" marker-end="url(#ta)">
             <line x1="260" y1="165" x2="386" y2="200"/>
@@ -656,6 +660,7 @@ pre.cmd .c { color: #9aa3b0; }
             <line x1="500" y1="280" x2="500" y2="366"/>
             <line x1="800" y1="260" x2="580" y2="366"/>
             <line x1="610" y1="405" x2="736" y2="405" marker-start="url(#ta)"/>
+            <line x1="390" y1="275" x2="264" y2="370"/>
           </g>
           <g font-size="12">
             <text x="268" y="160">onDeliveryVerified</text><text x="268" y="174">onQuantityMismatch</text>
@@ -665,14 +670,15 @@ pre.cmd .c { color: #9aa3b0; }
             <text x="508" y="320">deposit · release · refund</text>
             <text x="700" y="320">split</text>
             <text x="673" y="397" text-anchor="middle">safeTransfer</text>
+            <text x="336" y="348">mint · burn</text><text x="336" y="362">ownerOf</text>
           </g>
         </g>
       </svg>
-      <figcaption>Arrows are contract-to-contract calls. Each callee rejects any other caller with <code>OnlyModule</code>. Deploy order: Registry → MockSGD → PaymentEscrow → BunkerOrder → DeliveryRecord → QualityRecord → DisputeManager, then <code>setOrderContract</code>, <code>setDisputeManager</code> and <code>setModules</code>, each callable once (<code>AlreadyWired</code>).</figcaption>
+      <figcaption>Arrows are contract-to-contract calls. Each callee rejects any other caller with <code>OnlyModule</code>. Deploy order: Registry → MockSGD → PaymentEscrow → BunkerOrder → SettlementClaim → DeliveryRecord → QualityRecord → DisputeManager, then <code>setClaim</code>, <code>setOrderContract</code>, <code>setDisputeManager</code> and <code>setModules</code>, each callable once (<code>AlreadyWired</code>).</figcaption>
     </figure>
     <div class="stats">
       <div class="stat"><span class="big num">Solidity 0.8.24</span><span>EVM target Cancun, optimizer 200 runs</span></div>
-      <div class="stat"><span class="big num">OpenZeppelin 5</span><span>AccessControl, ERC20, Pausable, ReentrancyGuard, SafeERC20, EIP712, ECDSA</span></div>
+      <div class="stat"><span class="big num">OpenZeppelin 5</span><span>AccessControl, ERC20, ERC721, Pausable, ReentrancyGuard, SafeERC20, EIP712, ECDSA</span></div>
       <div class="stat"><span class="big num">Custom errors</span><span>every revert is named, e.g. <code>NotAuthorized(role, account)</code></span></div>
       <div class="stat"><span class="big num">Events</span><span>on every state change, tagged with the SS 709 document type</span></div>
     </div>
@@ -683,7 +689,7 @@ pre.cmd .c { color: #9aa3b0; }
   <div class="wrap stack">
     <div class="kicker">Contract reference</div>
     <h2>What each contract does and who may call it</h2>
-    <p class="prose">Shared enums, structs, role constants and all custom errors live in <code>contracts/interfaces/BunkerTypes.sol</code>. Two abstract bases do the access checks: <code>RoleGuard</code> asks the registry for an active role, and <code>SignedRoleGuard</code> adds EIP-712 signature recovery.</p>
+    <p class="prose">Shared enums, structs, role constants and the custom errors live in <code>contracts/interfaces/BunkerTypes.sol</code>. The one exception is <code>EnforcedPause</code>, which comes from OpenZeppelin's <code>Pausable</code>. Two abstract bases do the access checks: <code>RoleGuard</code> asks the registry for an active role, and <code>SignedRoleGuard</code> adds EIP-712 signature recovery.</p>
     <div class="contracts">
       <article class="ct core">
         <header><h3>BunkerOrder</h3><span class="mono">RoleGuard · Pausable · ReentrancyGuard</span></header>
@@ -691,13 +697,18 @@ pre.cmd .c { color: #9aa3b0; }
           <ul class="fns">
             <li><code>createOrder(params)</code><span>Buyer. Checks parties' roles, qty, price, tolerance ≤ 5%, retention ≤ 50%, future deadline.</span></li>
             <li><code>acceptOrder(id)</code><span>The order's supplier, before the deadline.</span></li>
-            <li><code>fundOrder(id)</code><span>The order's bank. Escrows qty × price plus the tolerance buffer.</span></li>
+            <li><code>fundOrder(id)</code><span>The order's bank. Escrows qty × price plus the tolerance buffer, and mints the payment claim to the supplier. Reverts <code>ClaimNotSet</code> if the claim contract is not wired.</span></li>
             <li><code>cancelOrder(id)</code><span>The order's buyer, before funding.</span></li>
-            <li><code>cancelExpired(id)</code><span>Anyone, after the deadline with no evidence. Full refund to the bank.</span></li>
+            <li><code>cancelExpired(id)</code><span>Anyone, after the deadline with no evidence. Full refund to the bank, and the claim is burned.</span></li>
             <li><code>releaseAfterTimeout(id)</code><span>Anyone, once the retention window has passed without a lab result.</span></li>
-            <li><code>pause()</code> / <code>unpause()</code><span>Admin. Blocks new orders and funding only.</span></li>
+            <li><code>pause()</code><span>Admin. Emergency stop: blocks new orders and funding only. Deliveries, payouts and disputes on existing orders keep working.</span></li>
+            <li><code>unpause()</code><span>Admin. Lifts the stop so new orders and funding work again.</span></li>
+            <li><code>setModules(delivery, quality, dispute)</code><span>Admin, once. Tells <code>BunkerOrder</code> which three contracts supply the delivery, lab and dispute evidence. A second call reverts <code>AlreadyWired</code>.</span></li>
+            <li><code>setClaim(claim)</code><span>Admin, once. Tells <code>BunkerOrder</code> which <code>SettlementClaim</code> contract to mint payment claims from. Until set, funding reverts <code>ClaimNotSet</code>.</span></li>
+            <li><code>payeeOf(id)</code><span>Who receives the supplier's payouts: the claim holder.</span></li>
           </ul>
-          <div class="evs"><span class="lbl2">Events</span><br>OrderCreated · OrderAccepted · OrderFunded · OrderCancelled · QuantityApproved · OrderSettled · OrderDisputed · OrderResolved</div>
+          <div class="evs"><span class="lbl2">Events</span><br>ModulesSet · ClaimSet · OrderCreated · OrderAccepted · OrderFunded · OrderCancelled · QuantityApproved · OrderSettled · OrderDisputed · OrderResolved</div>
+          <p>The first tranche and the retention are paid to <code>payeeOf(id)</code>. That is the supplier by default, and the financier if the claim was sold.</p>
         </div>
       </article>
       <article class="ct">
@@ -706,7 +717,8 @@ pre.cmd .c { color: #9aa3b0; }
           <ul class="fns">
             <li><code>submitMeterReading(id, kg, ticketHash)</code><span>Meter oracle, once per funded order. Stores the BMT hash.</span></li>
             <li><code>submitEBDN(id, kg, ebdnHash)</code><span>e-BDN oracle, once per funded order. Stores the BDN hash.</span></li>
-            <li><code>…BySig(…, deadline, sig)</code><span>Anyone relays; the signer must hold the oracle role.</span></li>
+            <li><code>submitMeterReadingBySig(id, kg, ticketHash, deadline, sig)</code><span>Same as <code>submitMeterReading</code>, but the meter oracle signs the report off-chain (EIP-712) and anyone may send it, so the oracle needs no gas. The signer must hold the meter role and the signature must not be past <code>deadline</code>.</span></li>
+            <li><code>submitEBDNBySig(id, kg, ebdnHash, deadline, sig)</code><span>The same gasless route for the e-BDN oracle's delivery note. The signer must hold the e-BDN role.</span></li>
           </ul>
           <p>When both are in, it compares them. A gap above tolerance calls <code>onQuantityMismatch</code>; otherwise <code>onDeliveryVerified</code> with the meter figure, which is the quantity of record.</p>
           <div class="evs"><span class="lbl2">Events</span><br>MeterReadingSubmitted · EBDNSubmitted · DeliveryVerified · QuantityMismatch</div>
@@ -717,7 +729,7 @@ pre.cmd .c { color: #9aa3b0; }
         <div class="body">
           <ul class="fns">
             <li><code>submitLabResult(id, passed, reportHash)</code><span>Lab, once per order, after quantity is approved.</span></li>
-            <li><code>submitLabResultBySig(…, deadline, sig)</code><span>Anyone relays; the signer must hold the lab role.</span></li>
+            <li><code>submitLabResultBySig(id, passed, reportHash, deadline, sig)</code><span>Same as <code>submitLabResult</code>, but the lab signs off-chain and anyone relays it, so the lab pays no gas. The signer must hold the lab role and the signature must not be past <code>deadline</code>.</span></li>
           </ul>
           <p>Calls <code>onLabResult</code>: a pass settles the order, a fail opens a quality dispute.</p>
           <div class="evs"><span class="lbl2">Events</span><br>LabResultSubmitted</div>
@@ -729,18 +741,37 @@ pre.cmd .c { color: #9aa3b0; }
           <ul class="fns">
             <li><code>openDispute(orderId, reason)</code><span>BunkerOrder (automatic) or the order's buyer or supplier (reason MANUAL).</span></li>
             <li><code>submitEvidence(disputeId, docType, docHash, note)</code><span>The order's buyer, supplier or bank, while disputed.</span></li>
-            <li><code>resolve(disputeId, supplierShareBps)</code><span>Arbiter. Splits the held amount through <code>escrow.split</code>.</span></li>
+            <li><code>resolve(disputeId, supplierShareBps)</code><span>Arbiter. Splits the held amount through <code>escrow.split</code>. The supplier's share goes to the claim holder.</span></li>
           </ul>
           <div class="evs"><span class="lbl2">Events</span><br>DisputeOpened · EvidenceSubmitted · DisputeResolved</div>
+        </div>
+      </article>
+      <article class="ct">
+        <header><h3>SettlementClaim</h3><span class="mono">ERC721 "BSCLAIM" · RoleGuard · ReentrancyGuard</span></header>
+        <div class="body">
+          <ul class="fns">
+            <li><code>mint(id, supplier)</code><span>BunkerOrder only. Creates the claim token for an order when it is funded and gives it to the supplier. Token id = order id.</span></li>
+            <li><code>burn(id)</code><span>BunkerOrder only. Destroys the claim when <code>cancelExpired</code> refunds the bank, so nothing is left to be paid.</span></li>
+            <li><code>offer(id, price)</code><span>The claim holder. Puts the claim up for sale at a fixed asking price in mSGD.</span></li>
+            <li><code>cancelOffer(id)</code><span>The claim holder. Withdraws the open offer.</span></li>
+            <li><code>buy(id, price)</code><span>A registered financier. Pays the seller and receives the token in one step. Needs an mSGD allowance and the exact offer price.</span></li>
+            <li><code>payeeOf(id)</code><span>View. The current holder of the claim, who receives the supplier's payouts.</span></li>
+            <li><code>outstanding(id)</code><span>View. How much of the claim is still to be paid out.</span></li>
+            <li><code>getOffer(id)</code><span>View. The open sale offer for the claim, if there is one.</span></li>
+          </ul>
+          <p>Tradable only while the order is <code>Funded</code> or <code>QuantityApproved</code>, not paused, and not past its delivery deadline without evidence. Every transfer must go to a financier. The financier has no recourse if the order ends in a dispute or a refund.</p>
+          <div class="evs"><span class="lbl2">Events</span><br>ClaimOffered · OfferCancelled · ClaimSold · Transfer (ERC-721)</div>
         </div>
       </article>
       <article class="ct">
         <header><h3>PaymentEscrow</h3><span class="mono">RoleGuard · ReentrancyGuard · SafeERC20</span></header>
         <div class="body">
           <ul class="fns">
-            <li><code>deposit · release · refund</code><span>BunkerOrder only. Moves mSGD in from the bank, out to the supplier or back to the bank.</span></li>
-            <li><code>split(id, supplier, sAmt, bank, bAmt)</code><span>DisputeManager only.</span></li>
-            <li><code>balanceOf(id)</code><span>Funds held for one order.</span></li>
+            <li><code>deposit(id, from, amount)</code><span>BunkerOrder only. Pulls mSGD from the bank into escrow for one order.</span></li>
+            <li><code>release(id, to, amount)</code><span>BunkerOrder only. Pays mSGD out of the order's escrow to the payee (the claim holder).</span></li>
+            <li><code>refund(id, to, amount)</code><span>BunkerOrder only. Returns mSGD from the order's escrow to the bank.</span></li>
+            <li><code>split(id, supplier, sAmt, bank, bAmt)</code><span>DisputeManager only. Divides the frozen amount between the supplier side and the bank in one step, following the arbiter's ruling.</span></li>
+            <li><code>balanceOf(id)</code><span>View. Funds currently held for one order.</span></li>
           </ul>
           <div class="evs"><span class="lbl2">Events</span><br>Deposited · Released · Refunded · Split · OrderContractSet · DisputeManagerSet</div>
         </div>
@@ -750,8 +781,10 @@ pre.cmd .c { color: #9aa3b0; }
         <div class="body">
           <ul class="fns">
             <li><code>register(account, role, name)</code><span>Admin. Grants a role and a display name.</span></li>
-            <li><code>revoke · suspend · reinstate</code><span>Admin. A suspended account fails every role check with <code>AccountSuspended</code>.</span></li>
-            <li><code>hasActiveRole(role, account)</code><span>The check every other contract uses.</span></li>
+            <li><code>revoke(account, role)</code><span>Admin. Permanently removes one role from an account.</span></li>
+            <li><code>suspend(account)</code><span>Admin. Freezes an account: it fails every role check with <code>AccountSuspended</code> until reinstated.</span></li>
+            <li><code>reinstate(account)</code><span>Admin. Lifts a suspension so the account's roles work again.</span></li>
+            <li><code>hasActiveRole(role, account)</code><span>View. True if the account holds the role and is not suspended. The check every other contract uses.</span></li>
           </ul>
           <div class="evs"><span class="lbl2">Events</span><br>ParticipantRegistered · ParticipantRevoked · ParticipantSuspended · ParticipantReinstated</div>
         </div>
@@ -767,7 +800,7 @@ pre.cmd .c { color: #9aa3b0; }
       </article>
     </div>
     <h3>Custom errors</h3>
-    <p class="prose mono" style="font-size:15px; line-height:1.7">NotAuthorized · AccountSuspended · NotOrderParty · InvalidState · InvalidParameter · DeadlinePassed · DeadlineNotReached · AlreadySubmitted · RetentionWindowOpen · InsufficientEscrow · OnlyModule · AlreadyWired · SignatureExpired · EnforcedPause</p>
+    <p class="prose mono" style="font-size:15px; line-height:1.7">NotAuthorized · AccountSuspended · InvalidState · InvalidParameter · DeadlinePassed · DeadlineNotReached · AlreadySubmitted · NotOrderParty · RetentionWindowOpen · InsufficientEscrow · OnlyModule · AlreadyWired · SignatureExpired · ClaimNotSet · NotClaimHolder · OfferNotActive · PriceMismatch · ClaimLocked · ClaimExpired · EnforcedPause (OpenZeppelin)</p>
   </div>
 </section>
 
@@ -775,26 +808,88 @@ pre.cmd .c { color: #9aa3b0; }
   <div class="wrap stack">
     <div class="kicker">Order state machine</div>
     <h2>Eight statuses, and every way between them</h2>
-    <p class="prose">Any call made in the wrong status reverts with <code>InvalidState</code>. Amounts: payable = delivered kg × price ÷ 1000, capped at the funded amount. The first tranche is payable × (1 − retention).</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>From</th><th>To</th><th>Trigger</th><th>Caller</th><th>Money</th></tr></thead>
-        <tbody>
-          <tr><td><span class="st">Created</span></td><td><span class="st">Accepted</span></td><td><code>acceptOrder</code> before deadline</td><td>Order's supplier</td><td>None</td></tr>
-          <tr><td><span class="st">Created</span> / <span class="st">Accepted</span></td><td><span class="st">Cancelled</span></td><td><code>cancelOrder</code></td><td>Order's buyer</td><td>None</td></tr>
-          <tr><td><span class="st">Accepted</span></td><td><span class="st y">Funded</span></td><td><code>fundOrder</code></td><td>Order's bank</td><td>Price + tolerance buffer into escrow</td></tr>
-          <tr><td><span class="st y">Funded</span></td><td><span class="st">Cancelled</span></td><td><code>cancelExpired</code>, past deadline, no evidence</td><td>Anyone</td><td>Full refund to bank</td></tr>
-          <tr><td><span class="st y">Funded</span></td><td><span class="st y">QuantityApproved</span></td><td>Second oracle report; meter ≈ e-BDN ≈ order</td><td>Meter / e-BDN oracle</td><td>First tranche (90%) to supplier</td></tr>
-          <tr><td><span class="st y">Funded</span></td><td><span class="st r">Disputed</span></td><td>Meter vs e-BDN gap above tolerance: <code>QUANTITY_MISMATCH</code></td><td>Automatic</td><td>All held</td></tr>
-          <tr><td><span class="st y">Funded</span></td><td><span class="st r">Disputed</span></td><td>Meter vs ordered qty above tolerance: <code>OUT_OF_TOLERANCE</code></td><td>Automatic</td><td>All held</td></tr>
-          <tr><td><span class="st y">QuantityApproved</span></td><td><span class="st g">Settled</span></td><td><code>submitLabResult(pass)</code></td><td>Lab</td><td>Retention to supplier, unused buffer to bank</td></tr>
-          <tr><td><span class="st y">QuantityApproved</span></td><td><span class="st g">Settled</span></td><td><code>releaseAfterTimeout</code> after the retention window</td><td>Anyone</td><td>Same as a pass</td></tr>
-          <tr><td><span class="st y">QuantityApproved</span></td><td><span class="st r">Disputed</span></td><td>Lab fail: <code>QUALITY_FAIL</code></td><td>Automatic</td><td>Retention held</td></tr>
-          <tr><td><span class="st y">Funded</span> / <span class="st y">QuantityApproved</span></td><td><span class="st r">Disputed</span></td><td><code>openDispute(MANUAL)</code></td><td>Order's buyer or supplier</td><td>Held</td></tr>
-          <tr><td><span class="st r">Disputed</span></td><td><span class="st g">Resolved</span></td><td><code>resolve(share)</code></td><td>Arbiter</td><td>Held amount split by share</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <p class="prose">Any call made in the wrong status reverts with <code>InvalidState</code>. Amounts: payable = delivered kg × price ÷ 1000, capped at the funded amount. The first tranche is payable × (1 − retention). Supplier payouts go to the claim holder: the supplier unless the claim was sold.</p>
+    <figure class="diagram">
+      <svg viewBox="0 0 1040 430" role="img" aria-label="Order state flowchart. The buyer creates an order (Created). The supplier accepts it (Accepted). The bank funds it (Funded): price plus buffer into escrow and the payment claim is minted. When the meter and e-BDN agree with each other and the order, it becomes QuantityApproved and 90% is paid to the claim holder. A lab pass, or the retention window passing, settles it (Settled). The buyer can cancel from Created or Accepted; anyone can cancel a Funded order past its deadline with no evidence, refunding the bank and burning the claim. A quantity mismatch, out-of-tolerance delivery or manual dispute moves Funded to Disputed; a lab fail or manual dispute moves QuantityApproved to Disputed. The arbiter resolves a dispute by splitting the held money (Resolved).">
+        <defs>
+          <marker id="sa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0d0f12"/></marker>
+          <marker id="sr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c8102e"/></marker>
+        </defs>
+        <g font-family="Source Sans 3, Segoe UI, Arial, sans-serif" font-size="12.5" fill="#0d0f12">
+          <!-- start -->
+          <circle cx="85" cy="30" r="7" fill="#0d0f12"/>
+          <line x1="85" y1="37" x2="85" y2="86" stroke="#0d0f12" stroke-width="2.5" marker-end="url(#sa)"/>
+          <text x="96" y="58">createOrder</text><text x="96" y="73" fill="#4a5260">buyer</text>
+
+          <!-- states -->
+          <g stroke="#0d0f12" stroke-width="3">
+            <rect x="20" y="90" width="130" height="66" fill="#ffffff"/>
+            <rect x="240" y="90" width="130" height="66" fill="#ffffff"/>
+            <rect x="460" y="90" width="130" height="66" fill="#fdf0c4"/>
+            <rect x="680" y="90" width="170" height="66" fill="#fdf0c4"/>
+            <rect x="920" y="90" width="110" height="66" fill="#dff0e4" stroke-width="5"/>
+            <rect x="110" y="330" width="150" height="66" fill="#f2f4f7" stroke-width="5"/>
+            <rect x="560" y="330" width="160" height="66" fill="#f8dde1"/>
+            <rect x="880" y="330" width="150" height="66" fill="#dff0e4" stroke-width="5"/>
+          </g>
+          <g font-family="Archivo, Arial, sans-serif" font-weight="800" font-size="16" text-anchor="middle">
+            <text x="85" y="114">Created</text><text x="305" y="114">Accepted</text><text x="525" y="114">Funded</text>
+            <text x="765" y="114">QuantityApproved</text><text x="975" y="114">Settled</text>
+            <text x="185" y="354">Cancelled</text><text x="640" y="354">Disputed</text><text x="955" y="354">Resolved</text>
+          </g>
+          <g text-anchor="middle" font-size="11.5" fill="#4a5260">
+            <text x="85" y="132">terms on record</text><text x="85" y="146">no money yet</text>
+            <text x="305" y="132">supplier agreed</text><text x="305" y="146">no money yet</text>
+            <text x="525" y="132">price + buffer locked</text><text x="525" y="146">claim minted</text>
+            <text x="765" y="132">90% paid to the</text><text x="765" y="146">claim holder</text>
+            <text x="975" y="132">10% to holder</text><text x="975" y="146">rest to bank</text>
+            <text x="185" y="372">bank refunded</text><text x="185" y="386">claim burned if funded</text>
+            <text x="640" y="372">money frozen</text><text x="640" y="386">evidence filed</text>
+            <text x="955" y="372">held money split</text><text x="955" y="386">share to holder</text>
+          </g>
+
+          <!-- happy path -->
+          <g stroke="#0d0f12" stroke-width="2.5" fill="none" marker-end="url(#sa)">
+            <line x1="150" y1="123" x2="236" y2="123"/>
+            <line x1="370" y1="123" x2="456" y2="123"/>
+            <line x1="590" y1="123" x2="676" y2="123"/>
+            <line x1="850" y1="123" x2="916" y2="123"/>
+          </g>
+          <g text-anchor="middle">
+            <text x="193" y="113">acceptOrder</text><text x="193" y="142" fill="#4a5260">supplier</text>
+            <text x="413" y="113">fundOrder</text><text x="413" y="142" fill="#4a5260">bank</text>
+            <text x="633" y="113">quantity OK</text><text x="633" y="142" fill="#4a5260">oracles</text>
+            <text x="883" y="113">lab pass</text><text x="883" y="142" fill="#4a5260">or timeout</text>
+          </g>
+
+          <!-- cancellations -->
+          <g stroke="#0d0f12" stroke-width="2.5" fill="none" marker-end="url(#sa)">
+            <line x1="85" y1="156" x2="158" y2="326"/>
+            <line x1="305" y1="156" x2="222" y2="326"/>
+            <line x1="490" y1="156" x2="264" y2="340"/>
+          </g>
+          <text x="192" y="232" text-anchor="middle">cancelOrder</text><text x="192" y="247" text-anchor="middle" fill="#4a5260">buyer</text>
+          <text x="334" y="300">cancelExpired</text><text x="334" y="315" fill="#4a5260">past deadline, anyone</text>
+
+          <!-- disputes -->
+          <g stroke="#c8102e" stroke-width="2.5" fill="none" stroke-dasharray="7 5" marker-end="url(#sr)">
+            <line x1="560" y1="156" x2="610" y2="326"/>
+            <line x1="730" y1="156" x2="680" y2="326"/>
+          </g>
+          <g fill="#c8102e" text-anchor="end">
+            <text x="565" y="205">QUANTITY_MISMATCH</text><text x="565" y="220">OUT_OF_TOLERANCE</text><text x="565" y="235">MANUAL (buyer / supplier)</text>
+          </g>
+          <g fill="#c8102e">
+            <text x="726" y="215">QUALITY_FAIL</text><text x="726" y="230">MANUAL</text>
+          </g>
+
+          <!-- resolution -->
+          <line x1="720" y1="363" x2="876" y2="363" stroke="#0d0f12" stroke-width="2.5" marker-end="url(#sa)"/>
+          <text x="798" y="353" text-anchor="middle">resolve(share)</text><text x="798" y="382" text-anchor="middle" fill="#4a5260">arbiter</text>
+        </g>
+      </svg>
+      <figcaption>Yellow: money locked in escrow. Red: frozen in a dispute (dashed arrows open automatically, except MANUAL). Green: final, paid out. Thick borders mark the three final statuses. An arrow is the only way out of its status; any other call reverts with <code>InvalidState</code>.</figcaption>
+    </figure>
     <p class="note prose">Settlement also computes an invoice fingerprint (SS 709 DSI) from the order, delivered quantity and amount, and emits it in <code>OrderSettled</code>. Demo parameters: tolerance 50 bps, retention 1,000 bps, retention window 120 s (14 days in production), delivery deadline 7 days.</p>
   </div>
 </section>
@@ -803,7 +898,7 @@ pre.cmd .c { color: #9aa3b0; }
   <div class="wrap cols2">
     <div class="stack">
       <div class="kicker">Roles and demo accounts</div>
-      <h2>Nine accounts, eight roles</h2>
+      <h2>Ten accounts, nine roles</h2>
       <p class="prose">A role is <code>keccak256</code> of its name. <code>scripts/seed.ts</code> registers the Hardhat test accounts below. It is safe to re-run and refuses to run against the wrong chain.</p>
     </div>
     <div class="table-wrap" style="margin-top:0">
@@ -819,6 +914,7 @@ pre.cmd .c { color: #9aa3b0; }
           <tr><td class="num">6</td><td><code>LAB</code></td><td>Fuel Lab</td></tr>
           <tr><td class="num">7</td><td><code>ARBITER</code></td><td>Arbiter</td></tr>
           <tr><td class="num">8</td><td>none</td><td>Outsider, left unregistered on purpose</td></tr>
+          <tr><td class="num">9</td><td><code>FINANCIER</code></td><td>Straits Trade Finance, 5,000,000 mSGD</td></tr>
         </tbody>
       </table>
     </div>
@@ -828,8 +924,8 @@ pre.cmd .c { color: #9aa3b0; }
 <section id="t-signed">
   <div class="wrap stack">
     <div class="kicker">Signed oracle reports (EIP-712)</div>
-    <h2>A meter or lab can sign a report without paying for a transaction</h2>
-    <p class="prose">The oracle signs typed data off-chain. Any account relays it to a <code>…BySig</code> function, and the contract recovers the signer and checks the signer's role, not the relayer's. That lets small firms report without running a funded wallet.</p>
+    <h2>Signing separates who vouches for a report from who sends it</h2>
+    <p class="prose">The oracle signs typed data off-chain with its registered key. Any account can carry it to a <code>…BySig</code> function, and the contract recovers the signer and checks the signer's role, not the sender's. A meter, e-BDN provider or lab therefore needs only a signing key. It needs no access to a node, no account to send transactions from, and no nonce handling.</p>
     <pre class="cmd">MeterReading(uint256 id, uint256 qtyKg, bytes32 ticketHash, uint256 deadline)
 EBDN(uint256 id, uint256 qtyKg, bytes32 ebdnHash, uint256 deadline)
 LabResult(uint256 id, bool passed, bytes32 reportHash, uint256 deadline)
@@ -841,16 +937,22 @@ LabResult(uint256 id, bool passed, bytes32 reportHash, uint256 deadline)
     </ul>
 
     <h3>Where it fits in the business</h3>
-    <p class="prose">Signing helps when the firm that holds the data isn't the firm that can easily send a blockchain transaction. The oracle keeps a signing key. A different party sends the transaction.</p>
+    <p class="prose">Signing helps when the firm that holds the data is an outside provider, not a consortium member. The oracle keeps a signing key. Any connected party can take its report on-chain.</p>
     <div class="tiers">
-      <div class="tier t-send"><h3>Barge flow meter</h3><p>The meter system sits on a barge with patchy connectivity and no funded wallet. It signs the reading when pumping ends, and the supplier's agent or the port platform relays it once the barge is back in range.</p><p class="note">The contract still records the meter oracle as the reporter, not the supplier.</p></div>
-      <div class="tier t-send"><h3>e-BDN provider</h3><p>One provider serves many deliveries a day. It signs each report, and a platform operator submits them in batches and pays the fees, as a relayer service would.</p><p class="note">No wallet or nonce handling per order.</p></div>
+      <div class="tier t-send"><h3>Barge flow meter</h3><p>The meter system sits on a barge with patchy connectivity and no link to a node. It signs the reading when pumping ends, and the supplier's agent or the port platform relays it once the barge is back in range.</p><p class="note">The contract still records the meter oracle as the reporter, not the supplier.</p></div>
+      <div class="tier t-send"><h3>e-BDN provider</h3><p>One provider serves many deliveries a day. It signs each report, and a platform operator submits them in batches.</p><p class="note">No node access, sending account or nonce handling per order.</p></div>
       <div class="tier t-send"><h3>Independent lab</h3><p>The lab signs its pass or fail result once. Whoever needs the result on-chain, usually the supplier or the buyer, sends it within the validity window.</p><p class="note">Bound to one order and one report, so it can't be reused.</p></div>
     </div>
 
-    <h3>Who pays the gas</h3>
-    <p class="prose">The <b>relayer</b> pays: whichever account sends the transaction that carries the signature. The oracle that signed pays nothing. In practice that is a platform operator covering it as a cost of running the service, or the party who benefits most, such as the supplier relaying the meter and e-BDN reports so it gets paid. A bank could also sponsor it as part of its service.</p>
-    <p class="note prose">In the classroom demo the Besu network has a gas price of zero, so nobody pays. The contract doesn't refund or charge the relayer, so who pays on a real network is a business arrangement outside the code. A fee taken from the escrow would be one way to close that gap.</p>
+    <h3>Why not just send a normal transaction?</h3>
+    <p class="prose">An oracle could sign an ordinary transaction itself and send it to a member's node. It wouldn't need a node of its own. Signing a report instead of a transaction removes three burdens:</p>
+    <ul class="pain">
+      <li><b>Network access.</b> Every outside data provider would need access to a member's node and, on a permissioned network, a place on the account allowlist. With signing, they only hand a signed report to a connected party.</li>
+      <li><b>Nonce handling.</b> Transactions from one account go through in order, so one stuck transaction blocks every later report. A signed report has no nonce and stands on its own.</li>
+      <li><b>Dependence on one sender.</b> Anyone can deliver the report, usually the party that wants to be paid. No single party can stall settlement by not sending it.</li>
+    </ul>
+    <p class="prose">The signed fields (order, quantity, document fingerprint, deadline) are also readable on their own, so an arbiter, insurer or court can check a report outside the chain.</p>
+    <p class="note prose">Gas is not the reason. The Besu network runs at a gas price of zero. On a public chain such as Sepolia, the account that sends the transaction would also pay the gas and the oracle would pay nothing. The contract doesn't refund or charge anyone, so who covers that cost would be a business arrangement outside the code.</p>
 
     <h3>What a signature proves, and what it doesn't</h3>
     <div class="cols2">
@@ -859,11 +961,20 @@ LabResult(uint256 id, bool passed, bytes32 reportHash, uint256 deadline)
     </div>
     <p class="note prose">The protection against a wrong number comes from the design around it: separate reporters for quantity and quality, a tolerance check between the two quantities, and the dispute process when they disagree.</p>
 
+    <h3>Where each oracle gets its data</h3>
+    <p class="prose">In the classroom demo the Oracle console stands in for the real systems: you type the quantity and the document text, and the app hashes the text. In a real deployment each oracle is a program run by the data owner, or a trusted platform. It reads its own source system and submits the result with its registered key.</p>
+    <div class="tiers">
+      <div class="tier t-send"><h3>Meter oracle</h3><p>The barge's certified mass flow meter produces a metering ticket and totals at the end of delivery. A logger or gateway on the barge reads them, signs the report (offline if needed) and queues it for relaying.</p></div>
+      <div class="tier t-send"><h3>e-BDN oracle</h3><p>The e-BDN platform already holds the electronic delivery note. A service calls the platform's system when the note is issued, takes the quantity and the document fingerprint, and signs and submits it.</p></div>
+      <div class="tier t-send"><h3>Lab oracle</h3><p>The lab's information system records the test result. A service takes the pass or fail and the report fingerprint, and submits it once the result is approved.</p></div>
+    </div>
+    <p class="note prose">The contract can't check that a source system's number is true. It trusts the registered oracle. That is why quantity comes from two independent sources that are compared, and quality from a separate lab. The blockchain's value is a tamper-proof record of what each party reported, not proof of the physical delivery.</p>
+
     <h3>How a signed report travels</h3>
     <div class="cons">
       <div class="cstep"><span class="cno">1</span><b>Sign on the barge</b><span>The meter system signs the reading and the ticket fingerprint with its private key. This works offline.</span></div>
       <div class="cstep"><span class="cno">2</span><b>Carry it to a connected party</b><span>When the barge has a link, it passes the data and signature to the supplier's agent or the port platform.</span></div>
-      <div class="cstep"><span class="cno">3</span><b>Relay and pay the gas</b><span>The relayer sends the quantity, ticket fingerprint, deadline and signature to the contract.</span></div>
+      <div class="cstep"><span class="cno">3</span><b>Relay it</b><span>The relayer sends the quantity, ticket fingerprint, deadline and signature to the contract.</span></div>
       <div class="cstep"><span class="cno">4</span><b>The contract checks and records</b><span>It recovers the signer, checks the role, stores the reading and moves the order on once the e-BDN agrees.</span></div>
     </div>
     <p class="note prose">The signature has to be relayed before its deadline. The app uses 15 minutes. A real deployment would allow hours to fit a barge's connectivity. On the Besu demo network the gas price is zero, and validators sign blocks, so there is no mining.</p>
@@ -919,7 +1030,7 @@ LabResult(uint256 id, bool passed, bytes32 reportHash, uint256 deadline)
   <div class="wrap stack">
     <div class="kicker">Web app</div>
     <h2>A React app that talks to the chain directly</h2>
-    <p class="prose">Vite, React 18 and ethers 6, with no backend. Reads go through a JSON-RPC provider, so the app works before a wallet connects. Writes are signed in MetaMask. Every revert is decoded against all seven ABIs and shown by name.</p>
+    <p class="prose">Vite, React 18 and ethers 6, with no backend. Reads go through a JSON-RPC provider, so the app works before a wallet connects. Writes are signed in MetaMask. Every revert is decoded against all eight ABIs and shown by name.</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>View</th><th>What it does</th></tr></thead>
@@ -928,6 +1039,8 @@ LabResult(uint256 id, bool passed, bytes32 reportHash, uint256 deadline)
           <tr><td><b>Order</b></td><td>Status pipeline, escrow tank showing held and retained funds, and the next action for the connected account.</td></tr>
           <tr><td><b>New order</b></td><td>Order form with demo values filled in and an anchorage picker.</td></tr>
           <tr><td><b>Oracle console</b></td><td>Meter, e-BDN and lab reports. Pasted text is hashed with keccak256. Sign-only and Relay for EIP-712.</td></tr>
+          <tr><td><b>Payment claim</b> (<code>ClaimPanel</code>)</td><td>On the Order view once funded: who holds the claim, offer for sale, withdraw, and buy with an approve step. Shows why a claim is locked and who was paid.</td></tr>
+          <tr><td><b>Supplier record</b> (<code>SupplierRecord</code>)</td><td>Shown to a financier before buying: the supplier's funded orders, how many settled clean, were resolved after a dispute, or were cancelled, replayed from events.</td></tr>
           <tr><td><b>Disputes</b></td><td>Open disputes, evidence by SS 709 document type, and the arbiter's share slider.</td></tr>
           <tr><td><b>Activity</b></td><td>One card per transaction with a plain-English line, plus a raw event table. Built from one <code>getLogs</code> call per block across all contracts.</td></tr>
           <tr><td><b>Market</b></td><td>Monthly Singapore bunker sales from data.gov.sg, with a bundled fallback file.</td></tr>
@@ -940,10 +1053,10 @@ LabResult(uint256 id, bool passed, bytes32 reportHash, uint256 deadline)
 <section id="t-tests">
   <div class="wrap stack">
     <div class="kicker">Testing</div>
-    <h2>247 tests, 99% of lines covered</h2>
+    <h2>292 tests, 99% of lines covered</h2>
     <div class="stats">
-      <div class="stat"><span class="big num">247</span><span>Hardhat tests in 8 files: registry, order, delivery, quality, dispute, signed, wiring, end-to-end</span></div>
-      <div class="stat"><span class="big num">99.4%</span><span>line coverage (<code>npm run coverage</code>)</span></div>
+      <div class="stat"><span class="big num">292</span><span>Hardhat tests in 9 files: registry, order, delivery, quality, dispute, claim, signed, wiring, end-to-end</span></div>
+      <div class="stat"><span class="big num">99.5%</span><span>line coverage (<code>npm run coverage</code>)</span></div>
       <div class="stat"><span class="big num">Every revert</span><span>has its own test, asserted by custom error name</span></div>
     </div>
     <h3>Scripted scenarios (<code>npm run scenarios</code>)</h3>
@@ -951,12 +1064,10 @@ LabResult(uint256 id, bool passed, bytes32 reportHash, uint256 deadline)
       <table>
         <thead><tr><th>#</th><th>Scenario</th><th>Ends in</th></tr></thead>
         <tbody>
-          <tr><td class="num">1</td><td>Normal: meter 500.2 t, e-BDN 500.0 t, lab pass</td><td><span class="st g">Settled</span></td></tr>
-          <tr><td class="num">2</td><td>Short delivery: both report 480 t</td><td><span class="st r">Disputed</span> OUT_OF_TOLERANCE</td></tr>
-          <tr><td class="num">3</td><td>Contaminated fuel: lab fail</td><td><span class="st r">Disputed</span> QUALITY_FAIL</td></tr>
-          <tr><td class="num">4</td><td>Outsider submits a meter reading</td><td>Reverts <code>NotAuthorized</code>, order unchanged</td></tr>
-          <tr><td class="num">5</td><td>Arbiter rules 70 / 30 on scenarios 2 and 3</td><td><span class="st g">Resolved</span></td></tr>
-          <tr><td class="num">6</td><td>Oracles sign, outsider relays; one forged relay rejected</td><td><span class="st g">Settled</span></td></tr>
+          <tr><td class="num">A</td><td>Financed delivery: supplier offers the claim at 99%, outsider's buy rejected, financier buys, meter 500.2 t, e-BDN 500.0 t, lab pass</td><td><span class="st g">Settled</span> 90% and the retention paid to the financier</td></tr>
+          <tr><td class="num">B</td><td>Short delivery: both report 480 t, then the arbiter rules 70 / 30</td><td><span class="st r">Disputed</span> OUT_OF_TOLERANCE, then <span class="st g">Resolved</span></td></tr>
+          <tr><td class="num">C</td><td>Contaminated fuel: lab fail</td><td><span class="st r">Disputed</span> QUALITY_FAIL, retention held</td></tr>
+          <tr><td class="num">X</td><td>Oracles sign, outsider relays; one forged relay rejected with <code>NotAuthorized</code></td><td><span class="st g">Settled</span>, same payout as run A</td></tr>
         </tbody>
       </table>
     </div>
@@ -967,30 +1078,18 @@ LabResult(uint256 id, bool passed, bytes32 reportHash, uint256 deadline)
   <div class="wrap stack">
     <div class="kicker">Run it</div>
     <h2>From a clean checkout to the demo</h2>
-    <div class="cols2">
-      <div class="stack">
-        <h3>On Besu (the demo)</h3>
+    <h3>On Besu (the demo)</h3>
 <pre class="cmd">npm install
-npm test                <span class="c"># 247 passing</span>
+npm test                <span class="c"># 292 passing</span>
 npm run besu:up         <span class="c"># start 4 validators</span>
-npm run deploy:besu     <span class="c"># deploy + seed</span>
-npm run scenarios:besu  <span class="c"># optional</span>
+npm run deploy          <span class="c"># deploy + seed</span>
+npm run scenarios       <span class="c"># optional, runs A, B, C and X</span>
 npm run ui              <span class="c"># http://localhost:5173</span></pre>
-        <p class="note">MetaMask: RPC <code>http://127.0.0.1:8550</code>, chain ID 4520, symbol ETH. Import the Hardhat test keys. <code>npm run besu:reset</code> wipes the chain.</p>
-      </div>
-      <div class="stack">
-        <h3>On a local Hardhat chain</h3>
-<pre class="cmd">npm run node            <span class="c"># chain 31337, port 8545</span>
-npm run deploy
-npm run scenarios
-npm run ui</pre>
-        <p class="note">Hardhat adds a Fast-forward control for time windows. The contracts also compile in Remix, since they import only <code>@openzeppelin/…</code> and relative paths.</p>
-      </div>
-    </div>
+    <p class="note">MetaMask: RPC <code>http://127.0.0.1:8550</code>, chain ID 4520, symbol ETH. Import the Hardhat test keys, including account #9 for the financier. <code>npm run besu:reset</code> wipes the chain. Tests run on Hardhat's in-process network and need no node. The contracts also compile in Remix, since they import only <code>@openzeppelin/…</code> and relative paths.</p>
     <h3>Repository</h3>
     <dl>
-      <dt><code>contracts/</code></dt><dd>Six core contracts, <code>base/</code> (RoleGuard, SignedRoleGuard), <code>interfaces/</code> and <code>mocks/MockSGD</code>.</dd>
-      <dt><code>test/</code></dt><dd>Eight Hardhat test files and helpers.</dd>
+      <dt><code>contracts/</code></dt><dd>Seven core contracts, <code>base/</code> (RoleGuard, SignedRoleGuard), <code>interfaces/</code> and <code>mocks/MockSGD</code>.</dd>
+      <dt><code>test/</code></dt><dd>Nine Hardhat test files and helpers.</dd>
       <dt><code>scripts/</code></dt><dd>Deploy, seed, scenarios, submission export and the sales-data fetcher.</dd>
       <dt><code>besu/</code></dt><dd>Docker Compose file, genesis, QBFT config and dev validator keys.</dd>
       <dt><code>ui/</code></dt><dd>The React app.</dd>
