@@ -47,6 +47,9 @@
 .hv-ttl { font-weight: 700; }
 .hv-loc { font-family: var(--f-chart); font-style: italic; color: var(--magenta); font-size: 0.95rem; }
 .hv-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; margin-top: 0.3rem; }
+.hv-fin circle { fill: var(--green); stroke: var(--bg); stroke-width: 1.5; }
+.hv-fin text { fill: #fff; font: 700 6px var(--f-body); pointer-events: none; }
+.hv-fin-tag { font-size: 0.78rem; font-weight: 700; color: var(--green); border: 2px solid var(--green); padding: 0.05rem 0.5rem; }
 .hv-turn { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; background: var(--yellow); color: var(--ink); border: 2px solid var(--ink); padding: 0.05rem 0.5rem; }
 .hv-held { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-size: 0.92rem; }
 .hv-held small { display: block; font-family: var(--f-body); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--grey); }

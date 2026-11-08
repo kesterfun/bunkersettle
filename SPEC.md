@@ -279,17 +279,17 @@ Keep styling plain and readable on a projector (large type, high contrast). Visu
 
 ---
 
-## 9. Demo scenarios (seed data must support all five)
+## 9. Demo scenarios (seed data must support all three runs)
 
 Accounts (Hardhat defaults): #0 Admin/Operator, #1 Bank ("Harbour Bank"), #2 Buyer ("MV Kirana Shipping"), #3 Supplier ("Lion Bunkers"), #4 Meter oracle, #5 e-BDN provider, #6 Lab, #7 Arbiter, #8 Outsider (unregistered), #9 Financier ("Straits Trade Finance", stretch). Names are fictional.
 
-1. **Normal**: 500 t VLSFO @ 980 mSGD/t, tolerance 50 bps, retention 1000 bps, window 120 s. Meter 500.2 t, eBDN 500.0 t → 90% paid → lab pass → Settled.
-2. **Short delivery**: meter 480 t → dispute OUT_OF_TOLERANCE.
-3. **Contaminated fuel**: normal delivery → lab fail → dispute QUALITY_FAIL, retention held.
-4. **Outsider**: account #8 submits a meter reading → `NotAuthorized`.
-5. **Resolution**: arbiter resolves scenario 2 or 3 at 70/30.
+Base order: 500 t VLSFO @ 980 mSGD/t, tolerance 50 bps, retention 1000 bps, window 120 s. Funding locks 492,450.00 mSGD.
 
-`scripts/scenarios.ts` runs 1–5 headless and prints balances after each step.
+- **Run A, financed delivery** (any anchorage): create, accept, fund, so the claim is minted to the supplier (#3). #3 offers the claim at 99% of the outstanding amount (485,100.00 against 490,000.00). Outsider #8 tries to buy and gets `NotAuthorized`. Financier #9 buys. Meter 500.2 t, e-BDN 500.0 t, so 90% (441,176.40) goes to the financier. Lab pass, so the retention (49,019.60) goes to the financier and 2,254.00 returns to the bank.
+- **Run B, short delivery to resolution** (Western Petroleum A): meter and e-BDN 480 t, so dispute OUT_OF_TOLERANCE. Optional evidence. Arbiter #7 resolves 70/30. The claim was not sold, so the supplier receives 344,715.00 and the bank 147,735.00.
+- **Run C, contaminated fuel** (Eastern Petroleum A, optional live): normal delivery, lab fail, so dispute QUALITY_FAIL with the retention (51,273.60) held.
+
+`scripts/scenarios.ts` runs A to C headless (plus the signed-submission extra), prints balances including the financier after each step, and asserts the outsider revert.
 
 ---
 
@@ -324,7 +324,7 @@ npm run fetch-sales ts-node scripts/fetch-sales.ts   (refreshes ui/public/bunker
 | 2 | Contracts | All §5 contracts compile; wiring works in a fixture |
 | 3 | Tests | Every §7 bullet has a passing test; coverage ≥ 90% lines |
 | 4 | Scripts | `npm run node` + `npm run deploy` gives a seeded chain; `npm run scenarios` runs 1–5 cleanly |
-| 5 | UI | All five scenarios can be run end to end in the browser with MetaMask; activity log shows every event |
+| 5 | UI | Demo runs A to C can be run end to end in the browser with MetaMask; activity log shows every event |
 | 6 | Docs | README complete; `npm run submission` produces the bundle; `docs/DECISIONS.md` up to date |
 
 Work milestone by milestone. Commit after each one with a clear message. Do not start the UI

@@ -291,13 +291,13 @@ export function OracleConsole() {
           <div className="oc-quick">
             <span className="label">Quick fill</span>
             <button className="btn btn-ghost btn-sm" onClick={() => fill("500.2", "500.0", true)}>
-              Scenario 1: meter 500.2 t, e-BDN 500.0 t
+              Run A: meter 500.2 t, e-BDN 500.0 t
             </button>
             <button className="btn btn-ghost btn-sm" onClick={() => fill("480", "480", true)}>
-              Scenario 2: 480 t on both
+              Run B: 480 t on both
             </button>
             <button className="btn btn-ghost btn-sm" onClick={() => fill("500.2", "500.0", false)}>
-              Scenario 3: lab fail
+              Run C: normal delivery, then lab fail
             </button>
           </div>
           <small className="oc-hint">Each account signs its own type: #4 meter, #5 e-BDN, #6 lab. Switch to #8 to see NotAuthorized.</small>

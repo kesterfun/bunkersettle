@@ -10,6 +10,7 @@ import {
   roleFromHash,
   shortHex,
   type ActivityEvent,
+  type ClaimView,
   type DisputeView,
   type OrderView,
   type Participant,
@@ -105,6 +106,8 @@ export interface ChainState {
   balances: Record<string, bigint>;
   /** Connected account's mSGD allowance to PaymentEscrow. */
   allowance: bigint;
+  /** Connected account's mSGD allowance to SettlementClaim (needed to buy a claim). */
+  claimAllowance: bigint;
   paused: boolean;
   /** Registry name for an address, else a short hex. */
   nameOf(address: string): string;
@@ -114,8 +117,9 @@ export interface ChainState {
   /**
    * Sends a transaction signed by MetaMask. Shows a toast that ends in "confirmed" or in the
    * decoded custom error. Never pre-validates. Resolves true when the tx was mined.
+   * `doneLabel` replaces the toast title once confirmed (for example "Buy claim" -> "Claim bought").
    */
-  send(label: string, build: (c: Contracts) => Promise<ethers.ContractTransactionResponse>): Promise<boolean>;
+  send(label: string, build: (c: Contracts) => Promise<ethers.ContractTransactionResponse>, doneLabel?: string): Promise<boolean>;
   /**
    * Asks the connected MetaMask account to sign (no transaction, no gas), e.g. an EIP-712 message.
    * Shows a toast that ends in "signed" or in the error. Resolves null when signing failed.
@@ -153,7 +157,7 @@ export function useChainNow(): number {
   return useContext(ClockContext);
 }
 
-function toOrder(r: ethers.Result, held: bigint, d: ethers.Result, lab: ethers.Result): OrderView {
+function toOrder(r: ethers.Result, held: bigint, d: ethers.Result, lab: ethers.Result, claim: ClaimView): OrderView {
   return {
     id: Number(r.id),
     buyer: r.buyer,
@@ -177,6 +181,7 @@ function toOrder(r: ethers.Result, held: bigint, d: ethers.Result, lab: ethers.R
     dscHash: r.dscHash,
     anchorage: Number(r.anchorage),
     held,
+    claim,
     delivery: {
       meterKg: d.meterKg,
       ebdnKg: d.ebdnKg,
@@ -277,6 +282,7 @@ export function ChainProvider({ children }: { children: ReactNode }) {
   const [balances, setBalances] = useState<Record<string, bigint>>({});
   const [me, setMe] = useState<Me | null>(null);
   const [allowance, setAllowance] = useState(0n);
+  const [claimAllowance, setClaimAllowance] = useState(0n);
   const [paused, setPaused] = useState(false);
   const [clientVersion, setClientVersion] = useState<string | null>(null);
   const [timeOffset, setTimeOffset] = useState<number | null>(null);
@@ -344,7 +350,7 @@ export function ChainProvider({ children }: { children: ReactNode }) {
         return prev === null ? off : Math.max(prev, off);
       });
 
-      const { BunkerOrder: order, DeliveryRecord: delivery, QualityRecord: quality, DisputeManager: dispute, MockSGD: token, ParticipantRegistry: registry } = read;
+      const { BunkerOrder: order, DeliveryRecord: delivery, QualityRecord: quality, DisputeManager: dispute, MockSGD: token, ParticipantRegistry: registry, SettlementClaim: claim } = read;
 
       // events since the last poll
       if (latest.number > lastLogBlock.current) {
@@ -371,7 +377,10 @@ export function ChainProvider({ children }: { children: ReactNode }) {
           }
           const args: Record<string, unknown> = {};
           parsed.fragment.inputs.forEach((input, i) => (args[input.name || String(i)] = parsed!.args[i]));
-          const rawId = args.orderId ?? (ORDER_SCOPED.has(src.name) && src.name !== "DisputeManager" ? args.id : undefined);
+          const rawId =
+            args.orderId ??
+            (src.name === "SettlementClaim" ? args.tokenId : undefined) ??
+            (ORDER_SCOPED.has(src.name) && src.name !== "DisputeManager" ? args.id : undefined);
           fresh.push({
             key: `${log.transactionHash}:${log.index}`,
             contract: src.name,
@@ -424,8 +433,16 @@ export function ChainProvider({ children }: { children: ReactNode }) {
       const ids = Array.from({ length: count }, (_, i) => i + 1);
       const fetched = await Promise.all(
         ids.map(async (id) => {
-          const [r, held, d, lab] = await Promise.all([order.getOrder(id), order.heldAmount(id), delivery.getDelivery(id), quality.getResult(id)]);
-          return toOrder(r, held, d, lab);
+          const [r, held, d, lab, holder, outstanding, offer] = await Promise.all([
+            order.getOrder(id),
+            order.heldAmount(id),
+            delivery.getDelivery(id),
+            quality.getResult(id),
+            claim.payeeOf(id) as Promise<string>,
+            claim.outstanding(id) as Promise<bigint>,
+            claim.getOffer(id),
+          ]);
+          return toOrder(r, held, d, lab, { holder, outstanding, offerPrice: offer.seller === ethers.ZeroAddress ? 0n : offer.price });
         }),
       );
       setOrders(fetched);
@@ -459,17 +476,20 @@ export function ChainProvider({ children }: { children: ReactNode }) {
       setPaused(await order.paused());
 
       if (acct) {
-        const [name, suspended, allow, ...has] = await Promise.all([
+        const [name, suspended, allow, claimAllow, ...has] = await Promise.all([
           registry.nameOf(acct) as Promise<string>,
           registry.isSuspended(acct) as Promise<boolean>,
           token.allowance(acct, ADDRESSES.PaymentEscrow) as Promise<bigint>,
+          token.allowance(acct, ADDRESSES.SettlementClaim) as Promise<bigint>,
           ...ROLES.map((r) => registry.hasRole(ROLE_HASH[r], acct) as Promise<boolean>),
         ]);
         setMe({ address: acct, name, suspended, roles: ROLES.filter((_, i) => has[i]), index: accountIndex(acct) });
         setAllowance(allow);
+        setClaimAllowance(claimAllow);
       } else {
         setMe(null);
         setAllowance(0n);
+        setClaimAllowance(0n);
       }
       setBlockNumber(latest.number);
     } catch (err) {
@@ -513,7 +533,7 @@ export function ChainProvider({ children }: { children: ReactNode }) {
   const dismissToast = useCallback((id: number) => setToasts((all) => all.filter((x) => x.id !== id)), []);
 
   const send = useCallback<ChainState["send"]>(
-    async (label, build) => {
+    async (label, build, doneLabel) => {
       const id = ++toastId.current;
       upsertToast({ id, kind: "pending", title: label, detail: "Confirm in MetaMask…" });
       try {
@@ -526,7 +546,7 @@ export function ChainProvider({ children }: { children: ReactNode }) {
         const tx = await build(write);
         upsertToast({ id, kind: "pending", title: label, detail: `Sent ${shortHex(tx.hash)}, waiting for a block…` });
         const rc = await tx.wait();
-        upsertToast({ id, kind: "success", title: label, detail: `Confirmed in block ${rc?.blockNumber ?? "?"}` });
+        upsertToast({ id, kind: "success", title: doneLabel ?? label, detail: `Confirmed in block ${rc?.blockNumber ?? "?"}` });
         setTimeout(() => dismissToast(id), 6000);
         void refresh();
         return true;
@@ -608,6 +628,7 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     participants,
     balances,
     allowance,
+    claimAllowance,
     paused,
     nameOf,
     read,

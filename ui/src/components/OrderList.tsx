@@ -1,4 +1,4 @@
-import { ANCHORAGES, STATUS_TONE, fmtSgd, fmtTonnes, isMyTurn, type OrderView } from "../domain";
+import { ANCHORAGES, STATUS_TONE, fmtSgd, fmtTonnes, isFinanced, isMyTurn, type OrderView } from "../domain";
 import { useChain, type Me } from "../chain/ChainContext";
 import { StatusChip, Who } from "./ui";
 
@@ -17,7 +17,7 @@ interface Props {
 /** Order cards beside the chart, with the selected order's footer. */
 export function OrderList({ orders, total, me, selected, filter, onSelect, onClearFilter, onOpen, onCreate }: Props) {
   const filterName = filter !== null ? ANCHORAGES[filter]?.name : null;
-  const { events } = useChain();
+  const { events, nameOf } = useChain();
   const createdBlock = (id: number) => events.find((e) => e.name === "OrderCreated" && e.orderId === id)?.blockNumber;
   return (
     <div className="hv-list">
@@ -55,6 +55,7 @@ export function OrderList({ orders, total, me, selected, filter, onSelect, onCle
                 <span className="hv-tags">
                   <StatusChip status={o.status} />
                   {isMyTurn(o, me) && <span className="hv-turn">Your turn</span>}
+                  {isFinanced(o) && <span className="hv-fin-tag">Financed by {nameOf(o.claim.holder)}</span>}
                 </span>
               </span>
               <span className="hv-held">

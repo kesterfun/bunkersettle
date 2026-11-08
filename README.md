@@ -42,7 +42,7 @@ The UI needs `npm run deploy` to have run first. It imports `ui/src/deployments.
 | `npm run gas` | Runs the tests with the gas reporter on. |
 | `npm run node` | Starts the local chain. |
 | `npm run deploy` | Deploys, wires and seeds (see above). |
-| `npm run scenarios` | Runs the six demo scenarios headless (1 to 6). |
+| `npm run scenarios` | Runs demo runs A to C headless, plus the signed-submission extra. |
 | `npm run ui` | Starts the Vite dev server. |
 | `npm run besu:up` / `besu:down` / `besu:reset` / `besu:logs` | Start, stop, wipe and follow the local Besu QBFT network (see Running on Besu QBFT). |
 | `npm run deploy:besu` / `scenarios:besu` | Deploy and seed on Besu; run the scenarios on Besu. |
@@ -128,9 +128,9 @@ The seed script registers these accounts. All names are fictional.
 | View | What it shows |
 |---|---|
 | Harbour | Chart home. Each order is a pin at its delivery anchorage. Click a pin to open the order. |
-| Order | Status pipeline, status stamp, escrow tank, scenario stepper and actions. Your own actions come first. Other parties' actions are collapsed, so you can demo reverts. |
+| Order | Status pipeline, status stamp, escrow tank, scenario stepper, payment claim panel (offer, withdraw, buy, supplier track record) and actions. Your own actions come first. Other parties' actions are collapsed, so you can demo reverts. |
 | New order | The buyer's create-order form with prefilled demo values and an anchorage dropdown. |
-| Oracle console | Demo only. Submits the meter reading, e-BDN and lab result. Has quick-fill buttons for scenarios 1 to 3. |
+| Oracle console | Demo only. Submits the meter reading, e-BDN and lab result. Has quick-fill buttons for runs A to C. |
 | Disputes | Evidence list and the arbiter's split slider. |
 | Activity | Every contract event, decoded, newest first. |
 | Market | Monthly Singapore bunker sales from data.gov.sg (thousand tonnes). Live, with a saved fallback. |
@@ -158,56 +158,47 @@ The meter oracle, e-BDN provider and lab can sign their submission off-chain ins
 
 To try it in the UI (Oracle console):
 
-1. Create, accept and fund an order first, as in scenario 1 below. Then, as #4, open Oracle console, pick the funded order, fill in the meter reading and press **Sign only (no gas)**. MetaMask asks for a signature, not a transaction.
+1. Create, accept and fund an order first, as in run A below. Then, as #4, open Oracle console, pick the funded order, fill in the meter reading and press **Sign only (no gas)**. MetaMask asks for a signature, not a transaction.
 2. Repeat as #5 for the e-BDN and as #6 for the lab result. Each signed item appears under **Signed submissions (EIP-712)**.
 3. Click **Change account** and switch to #8 (unregistered).
 4. In **Signed submissions (EIP-712)**, press **Relay** for each item. Each relay is a normal transaction from #8. The event shows #4, #5 or #6 as the signer.
 
-`npm run scenarios` runs the same flow headless as scenario 6, including one rejected relay.
+`npm run scenarios` runs the same flow headless as the extra at the end, including one rejected relay.
 
 ## Demo scenarios in the UI
 
-All scenarios use the same base order: 500 t VLSFO at 980 mSGD per tonne, tolerance 50 bps, retention 1000 bps, retention window 120 s. The New order form is prefilled with these values. You pick the anchorage in the form. Suggested choices: scenario 2 Western Petroleum A, scenario 3 Eastern Petroleum A, scenario 4 Western Petroleum B (scenario 1 can use any).
+All runs use the same base order: 500 t VLSFO at 980 mSGD per tonne, tolerance 50 bps, retention 1000 bps, retention window 120 s. The New order form is prefilled with these values. You pick the anchorage in the form. Suggested choices: run B Western Petroleum A, run C Eastern Petroleum A (run A can use any). Run C is optional in the live demo.
 
-### Scenario 1: normal delivery
+### Run A: financed delivery
 
 1. As #2 (buyer), open New order, check the prefilled values, and create the order.
-2. As #3 (supplier), open the order and click Accept.
-3. As #1 (bank), click Fund. The escrow pulls 500 t x 980 x 1.005 = 492,450.00 mSGD.
-4. As #4 (meter oracle), submit a meter reading of 500.2 t (500,200 kg).
-5. As #5 (e-BDN provider), submit an e-BDN of 500.0 t (500,000 kg).
-6. The order moves to QuantityApproved and 90% of the payable amount goes to the supplier.
-7. As #6 (lab), submit a lab result: passed.
-8. The order is Settled. The retention goes to the supplier and the unused funding returns to the bank.
-9. Optional variant: skip step 7. Wait for the retention window to end (Fast-forward +2 min). Then anyone clicks Release after timeout.
+2. As #3 (supplier), open the order and click Accept order.
+3. As #1 (bank), click Fund order. The escrow pulls 500 t x 980 x 1.005 = 492,450.00 mSGD, and the payment claim is issued to the supplier.
+4. As #3, open the Payment claim panel. The outstanding amount is 490,000.00 mSGD and the asking price is prefilled at 99% (485,100.00 mSGD, a 1.00 % discount). Click Offer for sale.
+5. Switch to #8 (outsider). Open "Other parties' claim actions" and press Buy claim. The transaction reverts with `NotAuthorized(role=FINANCIER, account=0x2361...)`.
+6. Switch to #9 (Straits Trade Finance). The supplier's track record appears above Buy claim (no completed orders yet on a fresh chain). Click Buy claim for 485,100.00 mSGD. If the claim contract is not yet approved to spend mSGD, the button runs approve then buy (two MetaMask prompts). The supplier receives 485,100.00 mSGD at once, and the panel shows the financier as holder.
+7. As #4 (meter oracle), submit 500.2 t (500,200 kg). As #5 (e-BDN provider), submit 500.0 t (500,000 kg).
+8. The order moves to QuantityApproved and 90% of the payable amount, 441,176.40 mSGD, goes to the financier (#9), not the supplier.
+9. As #6 (lab), submit a lab result: passed. The order is Settled. The retention, 49,019.60 mSGD, goes to the financier, and the 2,254.00 mSGD of unused funding returns to the bank.
+10. Net result: the supplier got 485,100.00 mSGD up front, the financier collected 490,196.00 mSGD for the 485,100.00 it paid (5,096.00 mSGD earned), and the bank paid 490,196.00 mSGD for the fuel.
 
-### Scenario 2: short delivery
+### Run B: short delivery to resolution
 
-1. Create a second order (anchorage Western Petroleum A). Accept it as #3 and fund it as #1.
-2. As #4, submit a meter reading of 480 t (480,000 kg).
-3. As #5, submit an e-BDN of 480 t.
-4. The order is outside tolerance. A dispute opens with reason OUT_OF_TOLERANCE and nothing is released.
+1. Create a second order (anchorage Western Petroleum A). Accept it as #3 and fund it as #1. Do not sell the claim.
+2. As #4, submit a meter reading of 480 t (480,000 kg). As #5, submit an e-BDN of 480 t.
+3. The delivery is outside tolerance. A dispute opens with reason OUT_OF_TOLERANCE and nothing is released. The claim is locked while the order is in dispute.
+4. Optional: open Disputes and, as #2 or #3, add evidence (pick a document type, paste the document text to hash it, add a note). Evidence does not move funds.
+5. As #7 (arbiter), find the dispute, leave the slider at 70% for the supplier and click Resolve dispute.
+6. The claim was not sold, so the supplier (#3) receives 344,715.00 mSGD and the bank receives 147,735.00 mSGD from the held amount. The order is Resolved.
 
-### Scenario 3: contaminated fuel
+### Run C: contaminated fuel (optional)
 
 1. Create a third order (anchorage Eastern Petroleum A). Accept as #3, fund as #1.
-2. As #4 and #5, submit a normal delivery (500,200 kg and 500,000 kg). 90% is released.
+2. As #4 and #5, submit a normal delivery (500,200 kg and 500,000 kg). 90% (441,176.40 mSGD) is released to the claim holder, here the supplier.
 3. As #6, submit a lab result: failed.
-4. A dispute opens with reason QUALITY_FAIL. The retention stays held.
+4. A dispute opens with reason QUALITY_FAIL. The retention, 51,273.60 mSGD, stays held until the arbiter decides.
 
-### Scenario 4: outsider
-
-1. Create a fourth order (anchorage Western Petroleum B). Accept as #3, fund as #1.
-2. Switch MetaMask to #8 (unregistered; the header shows "Unregistered account"). Open Oracle console, pick the order, click the Scenario 1 quick-fill and submit a meter reading.
-3. The transaction reverts and the toast shows `NotAuthorized(role=METER_ORACLE, account=...)`.
-
-### Scenario 5: resolution
-
-1. Optional: open Disputes and, as #2 or #3, add evidence to dispute #1 (pick a document type, paste the document text to hash it, add a note). Evidence does not move funds.
-2. As #7 (arbiter), find dispute #1 (order 2, out of tolerance), leave the slider at 70% for the supplier and click Resolve dispute.
-3. The supplier receives 344,715.00 mSGD and the bank receives 147,735.00 mSGD from the held amount. The order is Resolved.
-
-After the full run the final balances are: bank 3,180,189.00 and supplier 1,276,087.40 mSGD.
+After `npm run scenarios` on a fresh chain (runs A to C plus the signed extra) the final balances are: bank 3,182,443.00, supplier 1,761,187.40 and financier 5,005,096.00 mSGD.
 
 ## Delivery anchorage
 
@@ -305,15 +296,13 @@ Fields in order: `supplier`, `bank`, `fuelGrade`, `qtyKg`, `pricePerTonne`, `tol
 - `<deadline>` is a Unix timestamp in seconds, in the future (1893456000 is 1 Jan 2030).
 - `anchorage` 0 is Western Petroleum A and 3 is Eastern Petroleum B.
 
-### 7. The five scenarios in Remix
+### 7. The demo runs in Remix
 
-Order IDs start at 1. Use a new order for each scenario.
+Order IDs start at 1. Amounts are mSGD with 18 decimals, so 485,100 mSGD is `485100000000000000000000`.
 
-1. **Normal.** Buyer: `createOrder`. Supplier: `acceptOrder(1)`. Bank: `fundOrder(1)`. Meter oracle: `submitMeterReading(1, 500200, 0x<32 bytes>)`. e-BDN provider: `submitEBDN(1, 500000, 0x<32 bytes>)`. Lab: `submitLabResult(1, true, 0x<32 bytes>)`. Check `getOrder(1)`: status Settled.
-2. **Short delivery.** New order 2, accept, fund. Meter oracle: `submitMeterReading(2, 480000, ...)`. e-BDN: `submitEBDN(2, 480000, ...)`. A dispute opens (OUT_OF_TOLERANCE).
-3. **Contaminated fuel.** New order 3, accept, fund. Submit 500200 and 500000. Lab: `submitLabResult(3, false, ...)`. A dispute opens (QUALITY_FAIL).
-4. **Outsider.** New order 4, accept, fund. Switch to the 9th account and call `submitMeterReading(4, 500200, ...)`. It reverts with `NotAuthorized`.
-5. **Resolution.** Arbiter: `resolve(1, 7000)` on dispute 1 (the first dispute, from scenario 2). Supplier gets 70% of the held amount and the bank gets 30%.
+1. **Run A: financed delivery.** Buyer: `createOrder`. Supplier: `acceptOrder(1)`. Bank: `fundOrder(1)`; the claim for order 1 is minted to the supplier (`SettlementClaim.ownerOf(1)`). Supplier: `SettlementClaim.offer(1, 485100000000000000000000)`. Switch to the outsider (account #8) and call `buy(1, 485100000000000000000000)`: it reverts with `NotAuthorized` (FINANCIER). Financier (#9): `MockSGD.approve(<SettlementClaim>, 485100000000000000000000)`, then `buy(1, 485100000000000000000000)`. Meter oracle: `submitMeterReading(1, 500200, 0x<32 bytes>)`. e-BDN provider: `submitEBDN(1, 500000, 0x<32 bytes>)`; the 90% tranche goes to the financier. Lab: `submitLabResult(1, true, 0x<32 bytes>)`. Status Settled; the retention also goes to the financier.
+2. **Run B: short delivery to resolution.** New order 2, accept, fund. Meter oracle: `submitMeterReading(2, 480000, ...)`. e-BDN: `submitEBDN(2, 480000, ...)`. A dispute opens (OUT_OF_TOLERANCE). Arbiter: `DisputeManager.resolve(1, 7000)`. The claim was not sold, so the supplier gets 70% of the held amount and the bank gets 30%.
+3. **Run C: contaminated fuel.** New order 3, accept, fund. Submit 500200 and 500000. Lab: `submitLabResult(3, false, ...)`. A dispute opens (QUALITY_FAIL) and the retention stays held.
 
 The `...BySig` functions need an EIP-712 signature from the oracle's key. Remix has no simple way to make one, so produce it with a script or with MetaMask (the UI's **Sign only** button). The direct functions above work as before.
 

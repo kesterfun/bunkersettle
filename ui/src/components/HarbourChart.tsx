@@ -1,5 +1,5 @@
 import type { KeyboardEvent } from "react";
-import { ANCHORAGES, STATUS_TONE, isBunkering, isMyTurn, type OrderView, type Tone } from "../domain";
+import { ANCHORAGES, STATUS_TONE, isBunkering, isFinanced, isMyTurn, type OrderView, type Tone } from "../domain";
 import type { Me } from "../chain/ChainContext";
 
 const MAX_PINS = 6;
@@ -154,6 +154,13 @@ export function HarbourChart({ orders, me, selected, onSelect, onFilter }: Props
             <text className="hv-pin-n" x={x} y={y + 3.5} textAnchor="middle">
               {o.id}
             </text>
+            {isFinanced(o) && (
+              <g className="hv-fin">
+                <title>Financed: the payment claim is held by a financier</title>
+                <circle cx={x - 9} cy={y + 9} r={4.5} />
+                <text x={x - 9} y={y + 11.8} textAnchor="middle">$</text>
+              </g>
+            )}
             {isBunkering(o) && (
               <g className="hv-bravo">
                 <line x1={x + 10} y1={y - 12} x2={x + 10} y2={y + 2} />

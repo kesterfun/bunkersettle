@@ -20,6 +20,7 @@ import {
 import { ActivityLog } from "./ActivityLog";
 import { BravoFlag, Stamp, Who } from "./ui";
 import { EscrowTank } from "./EscrowTank";
+import { ClaimPanel, usePayouts } from "./ClaimPanel";
 import { NextStepBox } from "./ScenarioStepper";
 import "./OrderScreen.css";
 
@@ -77,6 +78,25 @@ interface Act {
   reason: string;
   danger?: boolean;
   run: (c: Contracts) => Promise<ContractTransactionResponse>;
+}
+
+/** "Paid to <recipient>" cells: the claim holder receives the supplier's money, so name them. */
+function PaidCells({ order: o }: { order: OrderView }) {
+  const { nameOf } = useChain();
+  const payouts = usePayouts(o.id);
+  if (payouts.length === 0) {
+    return <div><span className="label">Paid to supplier</span><b>{fmtSgd(0n)}</b></div>;
+  }
+  return (
+    <>
+      {payouts.map((p) => (
+        <div key={p.to}>
+          <span className="label">Paid to {nameOf(p.to)}</span>
+          <b>{fmtSgd(p.amount)}</b>
+        </div>
+      ))}
+    </>
+  );
 }
 
 export function OrderScreen() {
@@ -295,9 +315,11 @@ export function OrderScreen() {
           )}
         </div>
 
+        {o.fundedAmount > 0n && <ClaimPanel key={o.id} order={o} />}
+
         <div className="os-money">
           <div><span className="label">Funded</span><b>{fmtSgd(o.fundedAmount)}</b></div>
-          <div><span className="label">Paid to supplier</span><b>{fmtSgd(o.releasedAmount)}</b></div>
+          <PaidCells order={o} />
           <div><span className="label">Refunded to bank</span><b>{fmtSgd(o.refundedAmount)}</b></div>
           <div><span className="label">Delivered</span><b>{fmtTonnes(delivered)}</b></div>
         </div>

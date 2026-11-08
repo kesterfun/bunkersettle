@@ -8,6 +8,7 @@ import type {
   ParticipantRegistry,
   PaymentEscrow,
   QualityRecord,
+  SettlementClaim,
 } from "../typechain-types";
 import { readDeployments } from "./lib/deployments";
 
@@ -28,14 +29,15 @@ const S = Object.fromEntries(STATUS.map((name, i) => [name, i])) as Record<strin
 const REASONS = ["OUT_OF_TOLERANCE", "QUANTITY_MISMATCH", "QUALITY_FAIL", "MANUAL"];
 
 /** Role names, used to label NotAuthorized(role, account) in the output. */
-const ROLE_NAMES = ["ADMIN", "BANK", "BUYER", "SUPPLIER", "METER_ORACLE", "EBDN_ORACLE", "LAB", "ARBITER"];
+const ROLE_NAMES = ["ADMIN", "BANK", "BUYER", "SUPPLIER", "METER_ORACLE", "EBDN_ORACLE", "LAB", "ARBITER", "FINANCIER"];
 
 const TOL = 50;
 const RET = 1000;
 const WINDOW = 120;
 const DAY = 24 * 60 * 60;
 const SHARE_SUPPLIER_BPS = 7000;
-const PRICE = 980; // mSGD per tonne, SPEC 9 scenario 1
+const PRICE = 980; // mSGD per tonne, SPEC 9 demo order
+const OFFER_PCT = 99n; // run A: the supplier offers the claim at 99% of the outstanding amount
 /** `Anchorage` enum values in BunkerTypes.sol. */
 const ANCHORAGE = { WESTERN_PETROLEUM_A: 0, WESTERN_PETROLEUM_B: 1, EASTERN_PETROLEUM_A: 2, EASTERN_PETROLEUM_B: 3 };
 
@@ -108,7 +110,7 @@ async function main() {
   };
   const abi = (name: string) => dep.contracts[name].abi as InterfaceAbi;
 
-  const [admin, bank, buyer, supplier, meterOracle, ebdnOracle, lab, arbiter, outsider] =
+  const [admin, bank, buyer, supplier, meterOracle, ebdnOracle, lab, arbiter, outsider, financier] =
     await ethers.getSigners();
 
   const registry = new ethers.Contract(
@@ -121,6 +123,7 @@ async function main() {
   const order = new ethers.Contract(addr("BunkerOrder"), abi("BunkerOrder"), admin) as unknown as BunkerOrder;
   const delivery = new ethers.Contract(addr("DeliveryRecord"), abi("DeliveryRecord"), admin) as unknown as DeliveryRecord;
   const quality = new ethers.Contract(addr("QualityRecord"), abi("QualityRecord"), admin) as unknown as QualityRecord;
+  const claim = new ethers.Contract(addr("SettlementClaim"), abi("SettlementClaim"), admin) as unknown as SettlementClaim;
   const dispute = new ethers.Contract(addr("DisputeManager"), abi("DisputeManager"), admin) as unknown as DisputeManager;
   const deliveryIface: Interface = delivery.interface;
 
@@ -134,6 +137,7 @@ async function main() {
     ["EBDN_ORACLE", ebdnOracle.address],
     ["LAB", lab.address],
     ["ARBITER", arbiter.address],
+    ["FINANCIER", financier.address],
   ];
   for (const [role, account] of expectedRoles) {
     if (!(await registry.hasActiveRole(roleHash(role), account))) {
@@ -153,7 +157,7 @@ async function main() {
 
   /** Short label for an address: "#n" for the demo accounts, the address otherwise. */
   const acct = (address: string) => {
-    const i = [admin, bank, buyer, supplier, meterOracle, ebdnOracle, lab, arbiter, outsider].findIndex(
+    const i = [admin, bank, buyer, supplier, meterOracle, ebdnOracle, lab, arbiter, outsider, financier].findIndex(
       (s) => s.address === address,
     );
     return i >= 0 ? `#${i}` : address;
@@ -171,9 +175,10 @@ async function main() {
     const status = STATUS[Number(o.status)];
     const bankBal = await token.balanceOf(bank.address);
     const supplierBal = await token.balanceOf(supplier.address);
+    const financierBal = await token.balanceOf(financier.address);
     const escrowBal = await escrow.balanceOf(id);
     console.log(
-      `  ${label.padEnd(26)} order #${id}  ${status.padEnd(17)} bank ${fmt(bankBal).padStart(14)}  supplier ${fmt(supplierBal).padStart(14)}  escrow ${fmt(escrowBal).padStart(12)}`,
+      `  ${label.padEnd(26)} order #${id}  ${status.padEnd(17)} bank ${fmt(bankBal).padStart(14)}  supplier ${fmt(supplierBal).padStart(14)}  financier ${fmt(financierBal).padStart(14)}  escrow ${fmt(escrowBal).padStart(12)}`,
     );
     if (status !== expected) {
       const msg = `${label}: order #${id} expected ${expected}, got ${status}`;
@@ -240,85 +245,119 @@ async function main() {
     }
   }
 
-  // Shared between scenario 2/3 and scenario 5.
-  let shortOrder = 0n;
-  let contaminatedOrder = 0n;
+  /** Records a failure unless `ok`; prints the check either way. */
+  function check(ok: boolean, label: string, detail: string) {
+    console.log(`  ${label.padEnd(26)} ${detail}${ok ? "" : "  <- UNEXPECTED"}`);
+    if (!ok) failures.push(`${label}: ${detail}`);
+  }
 
-  await runScenario("Scenario 1: normal delivery", async () => {
-    const id = await createOrder("S1", ANCHORAGE.EASTERN_PETROLEUM_B);
-    summary.push({ scenario: "1 Normal", orderId: id });
-    await acceptAndFund("S1", id);
-    await (await delivery.connect(meterOracle).submitMeterReading(id, tonnes(500.2), h("BMT-001"))).wait();
-    await snapshot("S1: meter 500.2 t", id, "Funded");
-    await (await delivery.connect(ebdnOracle).submitEBDN(id, tonnes(500), h("BDN-001"))).wait();
-    await snapshot("S1: eBDN 500.0 t (90%)", id, "QuantityApproved");
-    await (await quality.connect(lab).submitLabResult(id, true, h("QTR-001"))).wait();
-    await snapshot("S1: lab pass", id, "Settled");
-  });
+  await runScenario("Run A: financed delivery", async () => {
+    const id = await createOrder("A", ANCHORAGE.EASTERN_PETROLEUM_B);
+    summary.push({ scenario: "A Financed delivery", orderId: id });
+    await acceptAndFund("A", id);
+    check((await claim.payeeOf(id)) === supplier.address, "A: claim issued", `held by supplier ${acct(await claim.payeeOf(id))}`);
 
-  await runScenario("Scenario 2: short delivery", async () => {
-    shortOrder = await createOrder("S2", ANCHORAGE.WESTERN_PETROLEUM_A);
-    summary.push({ scenario: "2 Short delivery", orderId: shortOrder });
-    await acceptAndFund("S2", shortOrder);
-    await (await delivery.connect(meterOracle).submitMeterReading(shortOrder, tonnes(480), h("BMT-002"))).wait();
-    await (await delivery.connect(ebdnOracle).submitEBDN(shortOrder, tonnes(480), h("BDN-002"))).wait();
-    await snapshot("S2: meter+eBDN 480 t", shortOrder, "Disputed");
-    await checkDispute("S2: dispute", shortOrder, "OUT_OF_TOLERANCE");
-  });
+    // The supplier sells the claim at 99% of what is still outstanding.
+    const outstanding = await claim.outstanding(id);
+    const price = (outstanding * OFFER_PCT) / 100n;
+    await (await claim.connect(supplier).offer(id, price)).wait();
+    console.log(`  A: #3 offers claim         price ${fmt(price)} against ${fmt(outstanding)} outstanding (${OFFER_PCT}%)`);
 
-  await runScenario("Scenario 3: contaminated fuel", async () => {
-    contaminatedOrder = await createOrder("S3", ANCHORAGE.EASTERN_PETROLEUM_A);
-    summary.push({ scenario: "3 Contaminated fuel", orderId: contaminatedOrder });
-    await acceptAndFund("S3", contaminatedOrder);
-    await (await delivery.connect(meterOracle).submitMeterReading(contaminatedOrder, tonnes(500.2), h("BMT-003"))).wait();
-    await (await delivery.connect(ebdnOracle).submitEBDN(contaminatedOrder, tonnes(500), h("BDN-003"))).wait();
-    await snapshot("S3: normal delivery", contaminatedOrder, "QuantityApproved");
-    await (await quality.connect(lab).submitLabResult(contaminatedOrder, false, h("QTR-003"))).wait();
-    await snapshot("S3: lab fail", contaminatedOrder, "Disputed");
-    await checkDispute("S3: dispute", contaminatedOrder, "QUALITY_FAIL");
-  });
-
-  await runScenario("Scenario 4: outsider", async () => {
-    const id = await createOrder("S4", ANCHORAGE.WESTERN_PETROLEUM_B);
-    summary.push({ scenario: "4 Outsider attempt", orderId: id });
-    await acceptAndFund("S4", id);
+    // An unregistered account cannot buy it.
     try {
-      await (await delivery.connect(outsider).submitMeterReading(id, tonnes(500.2), h("BMT-X"))).wait();
-      const msg = `S4: outsider meter submission succeeded`;
+      await (await claim.connect(outsider).buy(id, price)).wait();
+      const msg = "A: outsider bought the claim";
       failures.push(msg);
       console.log(`  UNEXPECTED: ${msg}`);
     } catch (err) {
-      const decoded = decodeRevert(err, deliveryIface);
+      const decoded = decodeRevert(err, claim.interface);
       if (decoded?.name === "NotAuthorized") {
         const [role, account] = decoded.args as [string, string];
         const roleName = ROLE_NAMES.find((r) => roleHash(r) === role) ?? role;
-        console.log(`  outsider #8 meter submit -> NotAuthorized(${roleName}, ${account})`);
+        console.log(`  outsider #8 buy claim -> NotAuthorized(${roleName}, ${account})`);
       } else {
-        const msg = `S4: expected NotAuthorized, got ${decoded?.name ?? (err as Error).message}`;
+        const msg = `A: expected NotAuthorized, got ${decoded?.name ?? (err as Error).message}`;
         failures.push(msg);
         console.log(`  UNEXPECTED: ${msg}`);
       }
     }
-    await snapshot("S4: after outsider", id, "Funded");
+    check((await claim.payeeOf(id)) === supplier.address, "A: after outsider", "claim still with the supplier");
+
+    // The financier buys it.
+    const supplierBefore = await token.balanceOf(supplier.address);
+    const financierBefore = await token.balanceOf(financier.address);
+    await (await claim.connect(financier).buy(id, price)).wait();
+    check((await claim.payeeOf(id)) === financier.address, "A: #9 buys claim", `now held by financier ${acct(await claim.payeeOf(id))}`);
+    check(
+      (await token.balanceOf(supplier.address)) - supplierBefore === price &&
+        financierBefore - (await token.balanceOf(financier.address)) === price,
+      "A: sale price paid",
+      `${fmt(price)} from #9 to #3`,
+    );
+
+    // Delivery and settlement: every payout goes to the financier.
+    await (await delivery.connect(meterOracle).submitMeterReading(id, tonnes(500.2), h("BMT-A"))).wait();
+    await snapshot("A: meter 500.2 t", id, "Funded");
+    const supplierMid = await token.balanceOf(supplier.address);
+    const financierMid = await token.balanceOf(financier.address);
+    await (await delivery.connect(ebdnOracle).submitEBDN(id, tonnes(500), h("BDN-A"))).wait();
+    const approved = await snapshot("A: eBDN 500.0 t (90%)", id, "QuantityApproved");
+    const tranche = approved.releasedAmount;
+    check(
+      (await token.balanceOf(financier.address)) - financierMid === tranche &&
+        (await token.balanceOf(supplier.address)) === supplierMid,
+      "A: 90% to financier",
+      `${fmt(tranche)} to #9, nothing to #3`,
+    );
+    const financierBeforeLab = await token.balanceOf(financier.address);
+    const bankBeforeLab = await token.balanceOf(bank.address);
+    await (await quality.connect(lab).submitLabResult(id, true, h("QTR-A"))).wait();
+    const settled = await snapshot("A: lab pass", id, "Settled");
+    const retention = settled.releasedAmount - tranche;
+    check(
+      (await token.balanceOf(financier.address)) - financierBeforeLab === retention &&
+        (await token.balanceOf(supplier.address)) === supplierMid,
+      "A: retention to financier",
+      `${fmt(retention)} to #9; bank gets ${fmt((await token.balanceOf(bank.address)) - bankBeforeLab)} excess back`,
+    );
   });
 
-  await runScenario("Scenario 5: arbiter resolution", async () => {
-    for (const [label, id] of [
-      ["S5: resolve S2 70/30", shortOrder],
-      ["S5: resolve S3 70/30", contaminatedOrder],
-    ] as const) {
-      const disputeId = (await order.getOrder(id)).disputeId;
-      await (await dispute.connect(arbiter).resolve(disputeId, SHARE_SUPPLIER_BPS)).wait();
-      await snapshot(label, id, "Resolved");
-    }
+  await runScenario("Run B: short delivery to resolution", async () => {
+    const id = await createOrder("B", ANCHORAGE.WESTERN_PETROLEUM_A);
+    summary.push({ scenario: "B Short delivery", orderId: id });
+    await acceptAndFund("B", id);
+    await (await delivery.connect(meterOracle).submitMeterReading(id, tonnes(480), h("BMT-B"))).wait();
+    await (await delivery.connect(ebdnOracle).submitEBDN(id, tonnes(480), h("BDN-B"))).wait();
+    await snapshot("B: meter+eBDN 480 t", id, "Disputed");
+    await checkDispute("B: dispute", id, "OUT_OF_TOLERANCE");
+    // The claim was not sold, so the supplier receives the arbiter's share.
+    const disputeId = (await order.getOrder(id)).disputeId;
+    const supplierBefore = await token.balanceOf(supplier.address);
+    await (await dispute.connect(arbiter).resolve(disputeId, SHARE_SUPPLIER_BPS)).wait();
+    const resolved = await snapshot("B: resolve 70/30", id, "Resolved");
+    const got = (await token.balanceOf(supplier.address)) - supplierBefore;
+    check(got > 0n && got === resolved.releasedAmount, "B: supplier receives 70%", `${fmt(got)} to #3`);
   });
 
-  await runScenario("Scenario 6: signed oracle submissions (EIP-712)", async () => {
+  await runScenario("Run C: contaminated fuel", async () => {
+    const id = await createOrder("C", ANCHORAGE.EASTERN_PETROLEUM_A);
+    summary.push({ scenario: "C Contaminated fuel", orderId: id });
+    await acceptAndFund("C", id);
+    await (await delivery.connect(meterOracle).submitMeterReading(id, tonnes(500.2), h("BMT-C"))).wait();
+    await (await delivery.connect(ebdnOracle).submitEBDN(id, tonnes(500), h("BDN-C"))).wait();
+    await snapshot("C: normal delivery", id, "QuantityApproved");
+    await (await quality.connect(lab).submitLabResult(id, false, h("QTR-C"))).wait();
+    const o = await snapshot("C: lab fail", id, "Disputed");
+    await checkDispute("C: dispute", id, "QUALITY_FAIL");
+    console.log(`  C: retention held in escrow ${fmt(await escrow.balanceOf(id))} (released so far ${fmt(o.releasedAmount)})`);
+  });
+
+  await runScenario("Extra: signed oracle submissions (EIP-712)", async () => {
     const bank0 = await token.balanceOf(bank.address);
     const supplier0 = await token.balanceOf(supplier.address);
-    const id = await createOrder("S6", ANCHORAGE.EASTERN_PETROLEUM_B);
-    summary.push({ scenario: "6 Signed (EIP-712)", orderId: id });
-    await acceptAndFund("S6", id);
+    const id = await createOrder("X", ANCHORAGE.EASTERN_PETROLEUM_B);
+    summary.push({ scenario: "X Signed (EIP-712)", orderId: id });
+    await acceptAndFund("X", id);
 
     // The oracles sign off-chain; the unregistered outsider (#8) relays. The contract checks the signer's role.
     const deliveryDomain = await signingDomain(delivery);
@@ -338,7 +377,7 @@ async function main() {
       await (
         await delivery.connect(outsider).submitMeterReadingBySig(id, meterQty, meterTicket, deadline, badSig)
       ).wait();
-      const msg = `S6: non-oracle signature was accepted`;
+      const msg = `X: non-oracle signature was accepted`;
       failures.push(msg);
       console.log(`  UNEXPECTED: ${msg}`);
     } catch (err) {
@@ -348,12 +387,12 @@ async function main() {
         const roleName = ROLE_NAMES.find((r) => roleHash(r) === role) ?? role;
         console.log(`  #8 signs meter as #8, relays -> NotAuthorized(${roleName}, ${account})`);
       } else {
-        const msg = `S6: expected NotAuthorized, got ${decoded?.name ?? (err as Error).message}`;
+        const msg = `X: expected NotAuthorized, got ${decoded?.name ?? (err as Error).message}`;
         failures.push(msg);
         console.log(`  UNEXPECTED: ${msg}`);
       }
     }
-    await snapshot("S6: after bad signature", id, "Funded");
+    await snapshot("X: after bad signature", id, "Funded");
 
     // Happy path: each oracle signs its payload, #8 relays it.
     const meterSig = await meterOracle.signTypedData(deliveryDomain, METER_TYPES, {
@@ -365,7 +404,7 @@ async function main() {
     await (
       await delivery.connect(outsider).submitMeterReadingBySig(id, meterQty, meterTicket, deadline, meterSig)
     ).wait();
-    await snapshot("S6: meter 500.2 t (#4 signed)", id, "Funded");
+    await snapshot("X: meter 500.2 t (#4 signed)", id, "Funded");
 
     const ebdnQty = tonnes(500);
     const ebdnHash = h("BDN-006");
@@ -376,7 +415,7 @@ async function main() {
       deadline,
     });
     await (await delivery.connect(outsider).submitEBDNBySig(id, ebdnQty, ebdnHash, deadline, ebdnSig)).wait();
-    await snapshot("S6: eBDN 500.0 t (#5 signed)", id, "QuantityApproved");
+    await snapshot("X: eBDN 500.0 t (#5 signed)", id, "QuantityApproved");
 
     const labHash = h("QTR-006");
     const labSig = await lab.signTypedData(qualityDomain, LAB_TYPES, {
@@ -386,7 +425,7 @@ async function main() {
       deadline,
     });
     await (await quality.connect(outsider).submitLabResultBySig(id, true, labHash, deadline, labSig)).wait();
-    await snapshot("S6: lab pass (#6 signed)", id, "Settled");
+    await snapshot("X: lab pass (#6 signed)", id, "Settled");
 
     // The events record the recovered signer, not the relayer.
     const checks: [string, string, string, string][] = [];
@@ -397,26 +436,26 @@ async function main() {
     checks.push(["e-BDN", "oracle", acct(ebdnLogs[ebdnLogs.length - 1]?.args.oracle ?? ""), acct(ebdnOracle.address)]);
     checks.push(["lab", "lab", acct(labLogs[labLogs.length - 1]?.args.lab ?? ""), acct(lab.address)]);
     for (const [what, field, recorded, expected] of checks) {
-      console.log(`  S6: ${what.padEnd(8)} event ${field} ${recorded}`);
+      console.log(`  X: ${what.padEnd(8)} event ${field} ${recorded}`);
       if (recorded !== expected) {
-        const msg = `S6: ${what} event ${field} expected ${expected}, got ${recorded}`;
+        const msg = `X: ${what} event ${field} expected ${expected}, got ${recorded}`;
         failures.push(msg);
         console.log(`    UNEXPECTED: ${msg}`);
       }
     }
 
-    // Same order terms and same quantities as scenario 1, so the payouts must match scenario 1's.
-    const s1 = summary.find((r) => r.scenario === "1 Normal");
+    // Same order terms and quantities as run A, so the total paid out must match run A's.
+    const s1 = summary.find((r) => r.scenario === "A Financed delivery");
     if (s1) {
       const paid = (await order.getOrder(s1.orderId)).releasedAmount;
       const bankDelta = bank0 - (await token.balanceOf(bank.address));
       const supplierDelta = (await token.balanceOf(supplier.address)) - supplier0;
       const matches = bankDelta === paid && supplierDelta === paid;
       console.log(
-        `  S6 payout ${fmt(supplierDelta)} to supplier, ${fmt(bankDelta)} from bank; S1 paid ${fmt(paid)} -> ${matches ? "match" : "MISMATCH"}`,
+        `  X payout ${fmt(supplierDelta)} to supplier, ${fmt(bankDelta)} from bank; run A paid ${fmt(paid)} -> ${matches ? "match" : "MISMATCH"}`,
       );
       if (!matches) {
-        const msg = `S6: payout does not match scenario 1 (${fmt(paid)})`;
+        const msg = `X: payout does not match run A (${fmt(paid)})`;
         failures.push(msg);
         console.log(`    UNEXPECTED: ${msg}`);
       }

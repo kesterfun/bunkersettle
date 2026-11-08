@@ -6,7 +6,7 @@ import "./CreateOrderForm.css";
 
 const FREE = "__free__";
 
-/** Buyer creates an order. Prefilled with SPEC 9 scenario 1. */
+/** Buyer creates an order. Prefilled with the SPEC 9 demo order. */
 export function CreateOrderForm() {
   const { participants, send, read, go } = useChain();
   const now = useChainNow();
@@ -96,7 +96,7 @@ export function CreateOrderForm() {
     <>
       <h1 className="page-title">
         New order
-        <small>Sign with Buyer (#2). Prefilled with demo scenario 1.</small>
+        <small>Sign with Buyer (#2). Prefilled with the demo order. Run B uses Western Petroleum A, run C Eastern Petroleum A, run A any anchorage.</small>
       </h1>
       <div className="cf">
         <section className="panel">

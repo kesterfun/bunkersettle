@@ -136,3 +136,11 @@ Choices made during the build that SPEC.md does not cover.
 - **Wiring.** `order.setClaim(claim)` is admin-only and once-only, like `setModules`. `fundOrder` reverts `ClaimNotSet` until it is called. `BunkerOrder.deliveryRecord` is part of `IBunkerOrder` so the claim can check for delivery evidence.
 - **Seed.** Hardhat account #9 is "Straits Trade Finance" (fictional), registered as FINANCIER, with 5,000,000 mSGD and an allowance for the claim contract.
 - **Out of scope.** No dispute deadline, no partial claim sales, no interest or discount calculation on-chain (the seller names the price).
+
+## Stretch – Receivable financing UI
+
+- **Track record from events, funded orders only.** The supplier record replays `OrderCreated`, `OrderFunded` and `DisputeOpened` from the UI's event list and reads the current status from the order. Orders cancelled before funding are not counted: no claim existed. A funded order cancelled after the deadline is "cancelled for non-delivery". Orders still in `Funded`, `QuantityApproved` or `Disputed` are shown separately and left out of the rate. The rate is settled cleanly divided by completed.
+- **Payouts named by replaying claim transfers.** `OrderSettled` and `OrderResolved` carry no payee, so the activity log looks up who held the claim at that log position.
+- **Money row lists real recipients.** "Paid to ..." cells come from `Released` and `Split` events, since a claim sold after the 90% tranche splits payouts between supplier and financier.
+- **Approve then buy.** A financier with too little allowance gets two transactions in one click: approve exactly the offer price, then buy at that price.
+- **Wrong-party buttons stay visible.** As with other order actions, buy and offer buttons for the wrong party sit in a collapsed group so the revert can be demonstrated; locked claims show a reason instead of buttons.

@@ -17,6 +17,17 @@ export interface DecodedError {
   message?: string;
 }
 
+/** Plain-English explanations for the receivable-financing errors. */
+const PLAIN: Record<string, string> = {
+  ClaimNotSet: "The claim contract is not linked to the order contract yet.",
+  NotClaimHolder: "Only the current holder of the claim can do this.",
+  OfferNotActive: "There is no open offer for this claim, or the offer no longer matches the holder.",
+  PriceMismatch: "The offer price changed. Refresh and buy at the current price.",
+  ClaimLocked: "This claim can't be traded now: the order is not waiting for payment any more.",
+  ClaimExpired: "This claim can't be traded: the delivery deadline passed with no delivery evidence.",
+  EnforcedPause: "The platform is paused, so claims can't be traded right now.",
+};
+
 /** Finds the first revert-data hex string anywhere inside an ethers / MetaMask error object. */
 function findRevertData(err: unknown, depth = 0): string | undefined {
   if (!err || typeof err !== "object" || depth > 6) return undefined;
@@ -36,7 +47,7 @@ function fmtArg(v: unknown): string {
   if (typeof v === "bigint") return v.toString();
   if (typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v)) {
     // Role hashes read better as names.
-    for (const r of ["ADMIN", "BANK", "BUYER", "SUPPLIER", "METER_ORACLE", "EBDN_ORACLE", "LAB", "ARBITER"]) {
+    for (const r of ["ADMIN", "BANK", "BUYER", "SUPPLIER", "METER_ORACLE", "EBDN_ORACLE", "LAB", "ARBITER", "FINANCIER"]) {
       if (ethers.keccak256(ethers.toUtf8Bytes(r)) === v.toLowerCase()) return r;
     }
   }
@@ -55,7 +66,7 @@ export function decodeError(err: unknown): DecodedError {
       const parsed = errorIface.parseError(data);
       if (parsed) {
         const args = parsed.fragment.inputs.map((input, i) => `${input.name || i}=${fmtArg(parsed.args[i])}`).join(", ");
-        return { name: parsed.name, args };
+        return { name: parsed.name, args, message: PLAIN[parsed.name] };
       }
     } catch {
       // fall through to the raw message

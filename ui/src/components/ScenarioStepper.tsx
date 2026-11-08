@@ -21,6 +21,11 @@ export function NextStepBox({ order: o }: { order: OrderView }) {
       ) : (
         <div className="os-next os-next-none">Nothing pending on the main path.</div>
       )}
+      {(o.status === "Funded" || o.status === "QuantityApproved") && (
+        <small className="os-hint">
+          Optional: the claim holder ({nameOf(o.claim.holder)}) can sell the payment claim to a financier (#9) from the payment claim panel below.
+        </small>
+      )}
     </div>
   );
 }

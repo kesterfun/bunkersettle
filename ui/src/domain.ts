@@ -51,7 +51,7 @@ export const DOC_LABEL: Record<(typeof DOC_TYPES)[number], string> = {
   DSI: "Sales invoice – Delivered",
 };
 
-export const ROLES = ["ADMIN", "BANK", "BUYER", "SUPPLIER", "METER_ORACLE", "EBDN_ORACLE", "LAB", "ARBITER"] as const;
+export const ROLES = ["ADMIN", "BANK", "BUYER", "SUPPLIER", "METER_ORACLE", "EBDN_ORACLE", "LAB", "ARBITER", "FINANCIER"] as const;
 export type RoleName = (typeof ROLES)[number];
 export const ROLE_HASH: Record<RoleName, string> = Object.fromEntries(
   ROLES.map((r) => [r, ethers.keccak256(ethers.toUtf8Bytes(r))]),
@@ -65,12 +65,13 @@ export const ROLE_LABEL: Record<RoleName, string> = {
   EBDN_ORACLE: "e-BDN oracle",
   LAB: "Lab",
   ARBITER: "Arbiter",
+  FINANCIER: "Financier",
 };
 /** Role name for a role hash, or undefined. */
 export const roleFromHash = (hash: string): RoleName | undefined =>
   ROLES.find((r) => ROLE_HASH[r].toLowerCase() === hash.toLowerCase());
 
-/** Hardhat default accounts #0–#8 (SPEC 9), used to show "account #n" hints. */
+/** Hardhat default accounts #0–#9 (SPEC 9), used to show "account #n" hints. */
 export const HARDHAT_ACCOUNTS = [
   "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
@@ -81,8 +82,9 @@ export const HARDHAT_ACCOUNTS = [
   "0x976EA74026E726554dB657fA54763abd0C3a0aa9",
   "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955",
   "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
+  "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720",
 ];
-/** Hardhat account index (0–8) for an address, or -1. */
+/** Hardhat account index (0–9) for an address, or -1. */
 export const accountIndex = (addr?: string | null): number =>
   addr ? HARDHAT_ACCOUNTS.findIndex((a) => a.toLowerCase() === addr.toLowerCase()) : -1;
 
@@ -147,9 +149,22 @@ export interface OrderView {
   anchorage: number;
   /** heldAmount(id): funded - released - refunded. */
   held: bigint;
+  claim: ClaimView;
   delivery: DeliveryView;
   lab: LabView;
 }
+
+/** Settlement claim state for an order (SettlementClaim.sol). */
+export interface ClaimView {
+  /** Current holder; the zero address when no claim exists (not funded yet, or burned). */
+  holder: string;
+  /** Amount the holder can still expect from escrow. */
+  outstanding: bigint;
+  /** Open offer price, or 0n when there is none. */
+  offerPrice: bigint;
+}
+
+export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 export interface DisputeView {
   id: number;
@@ -285,3 +300,16 @@ export function isMyTurn(o: OrderView, me: { address: string; roles: RoleName[] 
 /** Retention still held on a quantity-approved order: payable - released. */
 export const retentionOf = (o: OrderView) =>
   o.status === "QuantityApproved" ? o.payableAmount - o.releasedAmount : 0n;
+
+/** Discount of an offer price against the outstanding amount, in percent (e.g. 1 for 99 %). */
+export function discountPct(price: bigint, outstanding: bigint): number {
+  if (outstanding <= 0n) return 0;
+  return (Number(outstanding - price) / Number(outstanding)) * 100;
+}
+
+/** "1.00 %" style text for a discount; negative values mean the price is above the outstanding amount. */
+export const fmtPct = (n: number) => `${n.toFixed(2)} %`;
+
+/** The claim has been sold on: someone other than the supplier holds it. */
+export const isFinanced = (o: OrderView) =>
+  o.claim.holder !== ZERO_ADDRESS && o.claim.holder.toLowerCase() !== o.supplier.toLowerCase();

@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
 import { ethers } from "ethers";
 import { useChain } from "../chain/ChainContext";
-import { describeEvent, groupByTx, headline, isNoise } from "../activity";
+import { describeEvent, groupByTx, headline, isNoise, makePayeeAt } from "../activity";
 import { ANCHORAGES, DOC_TYPES, REASONS, roleFromHash, shortHex, type ActivityEvent } from "../domain";
 import "./ActivityLog.css";
 
 /** Event colour swatch: evidence yellow, money blue, disputes red, settlement green. */
 function tone(e: ActivityEvent): string {
+  if (e.name === "OfferCancelled") return "var(--grey)";
   if (/Dispute|Mismatch|Cancelled/.test(e.name)) return "var(--red)";
-  if (/Settled|Resolved|Refunded|Split/.test(e.name)) return "var(--green)";
+  if (/Settled|Resolved|Refunded|Split|ClaimSold/.test(e.name)) return "var(--green)";
   if (/Submitted|Evidence/.test(e.name)) return "var(--yellow)";
   if (e.contract === "ParticipantRegistry") return "var(--grey)";
   return "var(--blue)";
@@ -20,6 +21,7 @@ function fmtValue(key: string, v: unknown, nameOf: (a: string) => string): strin
     if (/Kg$/.test(key)) return `${v.toLocaleString("en-US")} kg`;
     if (key === "docType") return DOC_TYPES[Number(v)] ?? String(v);
     if (key === "reason") return REASONS[Number(v)] ?? String(v);
+    if (key === "price" || key === "outstanding") return `${Number(ethers.formatEther(v)).toLocaleString("en-US", { maximumFractionDigits: 2 })} mSGD`;
     if (key === "pricePerTonne") return `${ethers.formatEther(v)} mSGD/t`;
     if (key === "anchorage") return ANCHORAGES[Number(v)]?.name ?? String(v);
     return v.toString();
@@ -68,6 +70,7 @@ export function ActivityLog({ orderId, limit, compact }: { orderId?: number; lim
   const [mineOnly, setMineOnly] = useState(false);
 
   const groups = useMemo(() => groupByTx(events, txs), [events, txs]);
+  const payeeAt = useMemo(() => makePayeeAt(events), [events]);
   const orderIds = useMemo(() => [...new Set(events.map((e) => e.orderId).filter((x): x is number => x !== undefined))].sort((a, b) => a - b), [events]);
   const contracts = useMemo(() => [...new Set(events.map((e) => e.contract))].sort(), [events]);
 
@@ -184,7 +187,7 @@ export function ActivityLog({ orderId, limit, compact }: { orderId?: number; lim
             const nContracts = new Set(visible.map((e) => e.contract)).size;
             return (
               <li key={g.txHash} className="al-card">
-                <div className="al-head">{headline(g, nameOf)}</div>
+                <div className="al-head">{headline(g, nameOf, payeeAt)}</div>
                 <div className="al-meta">
                   <span>Block {g.blockNumber}</span>
                   {g.timestamp > 0 && <span>{fmtTime(g.timestamp)}</span>}
@@ -204,7 +207,7 @@ export function ActivityLog({ orderId, limit, compact }: { orderId?: number; lim
                       <span className="al-arrow" aria-hidden="true">
                         →
                       </span>
-                      {describeEvent(e, nameOf)}
+                      {describeEvent(e, nameOf, payeeAt)}
                     </li>
                   ))}
                 </ul>

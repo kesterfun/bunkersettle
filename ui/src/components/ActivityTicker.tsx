@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useChain } from "../chain/ChainContext";
-import { groupByTx, headline, isNoise } from "../activity";
+import { groupByTx, headline, isNoise, makePayeeAt } from "../activity";
 import "./ActivityTicker.css";
 
 /** Slim strip fixed to the bottom of every page: latest transaction, flashes on new ones. */
 export function ActivityTicker() {
   const { events, txs, nameOf, blockNumber, go, view } = useChain();
   const latest = useMemo(() => groupByTx(events, txs)[0], [events, txs]);
+  const payeeAt = useMemo(() => makePayeeAt(events), [events]);
   const [flash, setFlash] = useState(false);
   const seen = useRef<string | null | undefined>(undefined);
 
@@ -32,7 +33,7 @@ export function ActivityTicker() {
     <button type="button" className={`tk${flash ? " tk-flash" : ""}`} onClick={() => go("activity")}>
       <span className="tk-dot" aria-hidden="true" />
       <span className="tk-block mono">Block {blockNumber}</span>
-      <span className="tk-text">{latest ? headline(latest, nameOf) : "No transactions yet"}</span>
+      <span className="tk-text">{latest ? headline(latest, nameOf, payeeAt) : "No transactions yet"}</span>
       <span className="tk-count">
         {count} {count === 1 ? "event" : "events"}
       </span>
