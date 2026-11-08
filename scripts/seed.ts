@@ -105,6 +105,8 @@ async function main() {
     console.log("Claim allowance already sufficient; no approve");
   }
 
+  await seedDemoFinancier(registry, token, admin, roles.FINANCIER);
+
   console.log("\nSummary:");
   console.log(`  ${"Acct".padEnd(6)}${"Name".padEnd(24)}${"Role".padEnd(14)}${"mSGD balance"}`);
   for (let i = 0; i <= FINANCIER_INDEX; i++) {
@@ -117,6 +119,51 @@ async function main() {
   }
   console.log(`\nEscrow: ${escrowAddr}`);
   console.log(`Claim:  ${claimAddr}`);
+}
+
+/** Gas money for the demo financier. Besu's gas price is 0, so this is only a buffer for MetaMask's checks. */
+const DEMO_FINANCIER_ETH = ethers.parseEther("10");
+
+/**
+ * Registers the optional DEMO_FINANCIER address (from .env) as a second "Straits Trade Finance" account.
+ * It is an account created in the presenter's own MetaMask, for wallets that can't import account #9.
+ * Its key is not available here, so it is not pre-approved: its first claim purchase approves then buys.
+ */
+async function seedDemoFinancier(
+  registry: ParticipantRegistry,
+  token: MockSGD,
+  admin: Awaited<ReturnType<typeof ethers.getSigners>>[number],
+  financierRole: string,
+) {
+  const raw = process.env.DEMO_FINANCIER?.trim();
+  if (!raw) return;
+  if (!ethers.isAddress(raw)) throw new Error(`DEMO_FINANCIER in .env is not a valid address: ${raw}`);
+  const account = ethers.getAddress(raw);
+  const name = "Straits Trade Finance";
+
+  console.log(`\nDemo financier ${account} (DEMO_FINANCIER):`);
+  const upToDate =
+    (await registry.hasActiveRole(financierRole, account)) && (await registry.nameOf(account)) === name;
+  if (upToDate) {
+    console.log("  already registered");
+  } else {
+    await (await registry.register(account, financierRole, name)).wait();
+    console.log("  registered as FINANCIER");
+  }
+
+  const balance = await token.balanceOf(account);
+  if (balance < BANK_FLOAT) {
+    await (await token.connect(admin).mint(account, BANK_FLOAT - balance)).wait();
+    console.log(`  minted ${ethers.formatEther(BANK_FLOAT - balance)} mSGD`);
+  } else {
+    console.log("  mSGD float already sufficient; no mint");
+  }
+
+  const eth = await ethers.provider.getBalance(account);
+  if (eth < DEMO_FINANCIER_ETH) {
+    await (await admin.sendTransaction({ to: account, value: DEMO_FINANCIER_ETH - eth })).wait();
+    console.log(`  sent ${ethers.formatEther(DEMO_FINANCIER_ETH - eth)} ETH for gas`);
+  }
 }
 
 main().catch((error) => {

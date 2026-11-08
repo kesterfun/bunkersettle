@@ -65,6 +65,8 @@ Time-based paths cannot be shown live on a real chain. `cancelExpired` (after th
    | Currency symbol | ETH |
 
 2. Import accounts #1 to #9 into MetaMask (#9 is the financier, needed for run A). The accounts come from the standard Hardhat test mnemonic (`test test test test test test test test test test test junk`), which the Besu config also uses. Account #N is the Nth address of that mnemonic. Account #0 is the Port Operator (Admin) and is only needed if you want to act as admin; import it too if you do.
+
+   **If MetaMask won't import #9** (for example a Google/Apple-login wallet whose key backup fails), use your own account as the financier instead: in MetaMask click **Add account** (not Add wallet), rename it "Financier", copy its address into `.env` as `DEMO_FINANCIER=0x...` (see `.env.example`), and run `npm run deploy`. The seed registers it as Straits Trade Finance with 5,000,000 mSGD and 10 ETH, on every deploy. Its first claim purchase asks for two confirmations (approve, then buy); #9 is pre-approved, this account can't be because only your MetaMask holds its key. The UI shows it without a `#N` number. `npm run scenarios` still uses #9.
 3. Open http://localhost:5173 and connect every imported account to the site.
 4. Use the **Change account** button in the header to open MetaMask's account picker.
 
