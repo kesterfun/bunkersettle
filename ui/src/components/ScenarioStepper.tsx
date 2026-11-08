@@ -1,4 +1,4 @@
-import { nextStep, ROLE_LABEL, accountIndex, type OrderView } from "../domain";
+import { nextStep, ROLE_LABEL, accountIndex, isFinanced, ZERO_ADDRESS, type OrderView } from "../domain";
 import { useChain } from "../chain/ChainContext";
 
 /** Who acts next on this order, and with which account. Sits above the order's actions. */
@@ -21,9 +21,9 @@ export function NextStepBox({ order: o }: { order: OrderView }) {
       ) : (
         <div className="os-next os-next-none">Nothing pending on the main path.</div>
       )}
-      {(o.status === "Funded" || o.status === "QuantityApproved") && (
+      {(o.status === "Funded" || o.status === "QuantityApproved") && !isFinanced(o) && o.claim.holder !== ZERO_ADDRESS && (
         <small className="os-hint">
-          Optional: the claim holder ({nameOf(o.claim.holder)}) can sell the payment claim to a financier (#9) from the payment claim panel below.
+          Optional: {nameOf(o.supplier)} can sell the payment claim to a financier from the payment claim panel below.
         </small>
       )}
     </div>

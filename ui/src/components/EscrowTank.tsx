@@ -7,6 +7,8 @@ export function EscrowTank({ order: o }: { order: OrderView }) {
   const retention = retentionOf(o);
   const heldPct = pct(o.held);
   const retPct = Math.min(heldPct, pct(retention));
+  // Funding includes a tolerance buffer; once the delivered amount is known, what is not owed goes back to the bank.
+  const buffer = o.status === "QuantityApproved" && o.held > retention ? o.held - retention : 0n;
   return (
     <aside className="os-tankcol" aria-label="Escrow tank">
       <span className="label">Escrow tank</span>
@@ -21,6 +23,11 @@ export function EscrowTank({ order: o }: { order: OrderView }) {
       <div className="os-key">
         <span style={{ ["--k" as string]: "var(--blue)" }}>Held in escrow</span>
         <span style={{ ["--k" as string]: "var(--yellow)" }}>Retention {fmtSgd(retention)}</span>
+        {buffer > 0n && (
+          <span style={{ ["--k" as string]: "var(--blue)" }}>
+            Unused buffer {fmtSgd(buffer)}, back to the bank at settlement
+          </span>
+        )}
         <span style={{ ["--k" as string]: "var(--soft)" }}>
           {o.fundedAmount > 0n ? "Capacity" : "To be funded"} {fmtSgd(capacity)}
         </span>
