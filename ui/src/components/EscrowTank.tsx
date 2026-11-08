@@ -21,13 +21,14 @@ export function EscrowTank({ order: o }: { order: OrderView }) {
         <span className="os-unit"> mSGD held</span>
       </div>
       <div className="os-key">
-        <span style={{ ["--k" as string]: "var(--blue)" }}>Held in escrow</span>
-        <span style={{ ["--k" as string]: "var(--yellow)" }}>Retention {fmtSgd(retention)}</span>
-        {buffer > 0n && (
+        {buffer > 0n ? (
           <span style={{ ["--k" as string]: "var(--blue)" }}>
             Unused buffer {fmtSgd(buffer)}, back to the bank at settlement
           </span>
+        ) : (
+          <span style={{ ["--k" as string]: "var(--blue)" }}>Held in escrow</span>
         )}
+        <span style={{ ["--k" as string]: "var(--yellow)" }}>Retention {fmtSgd(retention)}</span>
         <span style={{ ["--k" as string]: "var(--soft)" }}>
           {o.fundedAmount > 0n ? "Capacity" : "To be funded"} {fmtSgd(capacity)}
         </span>
